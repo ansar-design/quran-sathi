@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>কুরআন সাথী</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="fonts/amiri.css">
+<style>
+:root { --bg:#f4f1ea; --surface:#fff; --ink:#1c2620; --muted:#5b665f; --line:#d9d4c7; --accent:#1f6b4a; --accent-ink:#fff; --accent-soft:#dcefe3; --warn:#8a5410; --warn-soft:#f6ead8; --bad:#b3261e;
+  --f-body:"Hind Siliguri","Noto Sans Bengali",system-ui,sans-serif; --f-ar:"Scheherazade New","Amiri","Noto Naskh Arabic","Droid Arabic Naskh",serif; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root { --bg:#101612; --surface:#18211b; --ink:#e6eee8; --muted:#9aaa9f; --line:#2b3730; --accent:#5cbf8c; --accent-ink:#0b1a12; --accent-soft:#1d3527; --warn:#e0a458; --warn-soft:#33281a; --bad:#ff8a80; color-scheme: dark; } }
+* { box-sizing:border-box; }
+html { height:100%; } body { min-height:100%; }   /* body must grow with content, else the sticky header scrolls away (5 Nov) */
+body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.6 var(--f-body); -webkit-tap-highlight-color:transparent; }
+header { position:sticky; top:0; z-index:5; background:var(--accent); color:var(--accent-ink); display:flex; align-items:center; gap:8px; padding:10px max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left)); padding-top:calc(10px + env(safe-area-inset-top,0px)); }
+header h1 { font-size:21px; margin:0; flex:1; min-width:0; font-weight:600; padding-right:84px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+header button { background:transparent; border:0; color:inherit; font-size:20px; min-width:44px; min-height:44px; border-radius:8px; }
+main { max-width:720px; margin:0 auto; padding:14px max(14px,env(safe-area-inset-right)) 180px max(14px,env(safe-area-inset-left)); display:grid; gap:12px; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px; }
+.note { background:var(--warn-soft); color:var(--warn); border-radius:12px; padding:10px 12px; font-size:15px; }
+.suras { display:grid; gap:8px; }
+.sura { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:var(--surface); color:inherit; border:1px solid var(--line); border-radius:12px; padding:10px 14px; min-height:56px; font:inherit; }
+.sura .no { background:var(--accent-soft); color:var(--accent); border-radius:50%; width:36px; height:36px; display:grid; place-items:center; font-weight:600; flex:none; font-size:15px; }
+.sura .bn { flex:1; font-weight:600; } .sura .meta { color:var(--muted); font-size:14px; }
+.sura .ar { font:26px/1.4 var(--f-ar); direction:rtl; }
+.ayah { display:block; width:100%; text-align:right; background:var(--surface); color:inherit; border:2px solid var(--line); border-radius:14px; padding:14px; font:inherit; }
+.ayah.sel { border-color:var(--accent); background:var(--accent-soft); }
+.ayah .t { font:var(--az,32px)/2.1 var(--f-ar); direction:rtl; display:block; }
+.szrow { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:4px 0 8px; } .szrow .btn { min-width:56px; }
+.n, .no, .meta, .timer { font-family:"Hind Siliguri","Noto Sans Bengali",system-ui,sans-serif; }
+.bism { font:30px/2 var(--f-ar); direction:rtl; text-align:center; color:var(--accent); padding:4px 0 8px; }
+.timer { align-self:center; color:var(--bad); font-weight:600; font-size:20px; min-width:70px; }
+.ov { position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,.5); display:grid; place-items:center; padding:20px; }
+.ov .card { max-width:420px; } .row { display:flex; gap:10px; justify-content:flex-end; margin-top:10px; }
+.ayah .pron { display:block; text-align:left; font-size:calc(var(--az,32px) * .5625); line-height:1.7; color:var(--ink); margin:6px 0; font-weight:600; font-family:'Hind Siliguri','Noto Sans Bengali',sans-serif; }
+.spell { display:flex; flex-wrap:wrap; flex-direction:row-reverse; gap:6px; margin:6px 0; }
+.sw { display:flex; flex-direction:column; align-items:center; background:rgba(0,0,0,.05); border-radius:8px; padding:4px 8px; max-width:100%; }
+.swa { font-family:var(--f-ar); font-size:var(--az,32px); direction:rtl; }
+.swb { font-size:calc(var(--az,32px) * .5); font-family:'Hind Siliguri','Noto Sans Bengali',sans-serif; text-align:center; }
+.pronnote { font-size:14px; color:var(--muted,#555); margin:4px 0 8px; font-family:'Hind Siliguri','Noto Sans Bengali',sans-serif; }
+.ayah .mean { display:block; text-align:left; font-size:calc(var(--az,32px) * .53125); line-height:1.7; color:var(--ink); margin:6px 0; font-family:'Hind Siliguri','Noto Sans Bengali',sans-serif; }
+.ayah .n { font-weight:600; color:var(--ink); font-size:16px; color:var(--muted); display:block; text-align:left; }
+.bar { position:fixed; left:0; right:0; bottom:0; z-index:6; background:var(--surface); border-top:1px solid var(--line); padding:10px max(14px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left)); display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.btn { border:0; border-radius:28px; padding:12px 22px; min-height:52px; font:inherit; font-weight:600; background:var(--accent); color:var(--accent-ink); }
+.btn.alt { background:var(--accent-soft); color:var(--accent); }
+.btn.rec { background:var(--bad); color:#fff; }
+.btn[disabled] { opacity:.45; }
+h2 { font-size:19px; margin:0 0 6px; } p { margin:6px 0; } .muted { color:var(--muted); font-size:15px; }
+.ok { color:var(--accent); font-weight:600; }
+button[aria-label="মতামত"] { top:calc(8px + env(safe-area-inset-top,0px)) !important; bottom:auto !important; left:auto !important; right:56px !important; width:auto; min-width:44px; height:44px; padding:0 12px !important; font-size:15px !important; font-weight:600; background:rgba(255,255,255,.2) !important; border-radius:22px !important; }
+.tabs { display:flex; gap:8px; } .tabs .btn { flex:1; padding:8px 12px; min-height:46px; }
+.tabs .btn.alt { border:1px solid var(--line); }
+.lesson { display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:var(--surface); color:inherit; border:1px solid var(--line); border-radius:12px; padding:10px 14px; min-height:52px; font:inherit; margin-top:6px; }
+.lesson .bn { flex:1; } .lesson .ar { font:24px/1.4 var(--f-ar); direction:rtl; }
+.hz h2 { margin-top:2px; } .hz select { font:inherit; padding:8px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); min-height:44px; }
+.bar .hint { flex-basis:100%; text-align:center; font-size:13px; margin:0; }
+.juzh { font-size:16px; color:var(--accent); margin:14px 2px 2px; scroll-margin-top:80px; }
+.pghead { margin:8px 0; } .pghead .btn { flex:none; padding:8px 14px; min-height:44px; }
+.pgbody { display:flex; flex-direction:column; gap:10px; touch-action:pan-y; }
+.pgflow { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px 14px; font:var(--az,32px)/2.2 var(--f-ar); text-align:justify; text-align-last:right; }
+.pgay { border-radius:8px; cursor:pointer; padding:0 2px; -webkit-box-decoration-break:clone; box-decoration-break:clone; }
+.pgay.sel { background:var(--accent-soft); outline:2px solid var(--accent); }
+.pgend { color:var(--accent); font-size:.8em; margin:0 4px; white-space:nowrap; }
+.pgay.pghid { background:var(--bg); border:1px dashed var(--line); padding:2px 10px; margin:2px; display:inline-block; line-height:1.6; }
+.pgcover { font:600 16px/1.6 var(--f-body); color:var(--muted); }
+.bar.pgbar { flex-wrap:nowrap; } .bar.pgbar .btn { padding:10px 14px; min-width:0; }
+.pgsrc { margin-top:14px; font-size:13px; }
+.szrow select { font:inherit; padding:8px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); min-height:44px; flex:1; min-width:0; }
+.dlbox { display:flex; flex-wrap:wrap; gap:8px; align-items:center; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
+.dlbox > span { flex:1 1 200px; font-size:15px; }
+/* Keep learning controls readable with the same saved size as the practice text. */
+.learn-view .btn, .learn-view select { font-size:max(17px, calc(var(--az,32px) * .53125)); max-width:100%; white-space:normal; }
+.learn-view select { min-width:0; }
+.learn-view .swb { overflow-wrap:anywhere; }
+.learn-cards { display:flex; flex-wrap:wrap; direction:rtl; gap:10px; margin:12px 0; }
+.learn-cards > .swa { padding:8px 12px; background:var(--accent-soft); border-radius:8px; font-size:var(--az,32px); }
+.learn-cards .bism { font-size:var(--az,32px); }
+.learn-cards .swb { direction:ltr; font-size:calc(var(--az,32px) * .5); }
+.reading-size .size-label { flex-basis:100%; }
+/* large system text: bar keeps to ~1/4 of the screen (fitBar in app.js) */
+.bar.compact { gap:6px; padding-top:6px; padding-bottom:calc(6px + env(safe-area-inset-bottom,0px)); }
+.bar.compact .hint, .bar.compact > .muted { display:none; }
+.bar.compact button { min-height:40px; padding-top:2px; padding-bottom:2px; font-size:85%; }
+.viewopts { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:4px 12px; }
+.viewopts > summary { min-height:44px; display:flex; align-items:center; cursor:pointer; font-weight:600; color:var(--accent); }
+.viewopts[open] > summary { margin-bottom:8px; }
+.viewopts .szrow { margin:8px 0 6px; }
+.tjlegend { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:14px; margin:4px 0 8px; } .tjlegend .muted { flex-basis:100%; font-size:13px; }
+/* tajweed colours (common mushaf scheme): silent grey, madd reds, ghunnah/ikhfa greens, qalqala blue */
+.tj-hamzat_wasl, .tj-lam_shamsiyyah, .tj-silent { color:#9a9a9a; }
+.tj-madd_2 { color:#c58a00; } .tj-madd_246 { color:#d97706; } .tj-madd_munfasil { color:#e0572b; } .tj-madd_muttasil { color:#c62828; } .tj-madd_6 { color:#8b0000; }
+.tj-ghunnah { color:#2e7d32; } .tj-ikhfa, .tj-ikhfa_shafawi { color:#7b1fa2; } .tj-iqlab { color:#0277bd; }
+.tj-idghaam_ghunnah, .tj-idghaam_shafawi { color:#00897b; } .tj-idghaam_no_ghunnah, .tj-idghaam_mutajanisayn, .tj-idghaam_mutaqaribayn { color:#6d7f8c; }
+.tj-qalqalah { color:#1565c0; }
+@media (prefers-color-scheme: dark) {
+ .tj-hamzat_wasl, .tj-lam_shamsiyyah, .tj-silent { color:#8d8d8d; } .tj-madd_2 { color:#ffc94d; } .tj-madd_246 { color:#ffa94d; } .tj-madd_munfasil { color:#ff8a65; }
+ .tj-madd_muttasil { color:#ff6b6b; } .tj-madd_6 { color:#ff4d6d; } .tj-ghunnah { color:#81c784; } .tj-ikhfa, .tj-ikhfa_shafawi { color:#ce93d8; } .tj-iqlab { color:#4fc3f7; }
+ .tj-idghaam_ghunnah, .tj-idghaam_shafawi { color:#4db6ac; } .tj-idghaam_no_ghunnah, .tj-idghaam_mutajanisayn, .tj-idghaam_mutaqaribayn { color:#a7b6c2; } .tj-qalqalah { color:#64b5f6; }
+}
+.sw.tap { cursor:pointer; outline:1px dashed var(--accent); outline-offset:-3px; } .sw.tap:active { background:var(--accent-soft); }
+[hidden] { display:none !important; }
+dialog.bn-dialog { border:0; border-radius:16px; padding:20px; width:calc(100% - 40px); max-width:420px; max-height:85dvh; overflow:auto; color:var(--ink); background:var(--surface); font:inherit; box-sizing:border-box; }
+dialog.bn-dialog::backdrop { background:rgba(0,0,0,.5); }
+.bn-dialog h2 { margin-top:0; } .bn-dialog p { white-space:pre-line; }
+.bn-dialog input { box-sizing:border-box; width:100%; font:inherit; padding:12px; }
+.bn-dialog .row { flex-wrap:wrap; } .bn-dialog button { min-height:48px; }
+</style>
+</head>
+<body>
+<header><button id="back" aria-label="পিছনে" hidden>←</button><h1 id="title">কুরআন সাথী</h1><button id="about-btn" aria-label="তথ্য">ⓘ</button></header>
+<main id="main"><p class="muted">লোড হচ্ছে…</p></main>
+<div class="bar" id="bar" hidden></div>
+<script>
+window.APP_FEEDBACK = { app:'কুরআন সাথী', pkg:'com.amirahsworld.qurantutor', version:'0.1 (1)', email:'md@tosacreations.com', lang:'bn', bottom:80 };
+</script>
+<script src="feedback.js"></script>
+<script src="lib/hifz_plan.js"></script>
+<script src="lib/learn_path.js"></script>
+<script src="lib/bangla_dialog.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

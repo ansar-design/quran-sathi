@@ -1,0 +1,66 @@
+"""Bounded source-marked assimilation; not expert clearance of teaching."""
+import json
+import sys
+import unittest
+from jia_test import upgrade_jia
+from iya_test import upgrade_iya
+from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT/'tools'))
+import translit_bn as T
+import spell_bn as S
+from tanween_test import upgrade_old_spelling
+from wasl_test import CHANGED_AYAHS
+
+class AssimilationTests(unittest.TestCase):
+    def test_connected_golden_and_internal_dal(self):
+        for ar, expected in [('هَل لَّكَ', 'হাল্লাক্'), ('بَل لَّا', 'বাল্লা'),
+                             ('هُم مَّا', 'হুম্মা'), ('عَبَدتُّمْ', '‘আবাত্তুম্')]:
+            self.assertEqual(T.convert_ayah(ar), expected)
+        self.assertIn('দাল-সাকিন (তা-এর সঙ্গে মিশিয়ে পড়ুন)', S.spell_word('عَبَدتُّمْ'))
+        self.assertNotIn('দাল-সাকিন-দ্', S.spell_word('عَبَدتُّمْ'))
+
+    def test_spelling_context_and_original_words(self):
+        rows = S.spell_ayah('هَل لَّكَ')
+        self.assertEqual([r[0] for r in rows], ['هَل', 'لَّكَ'])
+        self.assertIn('পরের শব্দের লাম-এর সঙ্গে মিশিয়ে পড়ুন', rows[0][1])
+        self.assertIn('লাম-সাকিন-ল্', S.spell_word('هَل'))
+        self.assertIn('মীম-সাকিন (পরের শব্দের মীম-এর সঙ্গে মিশিয়ে পড়ুন)', S.spell_ayah('هُم مَّا')[0][1])
+
+    def test_boundaries_and_negative_cases(self):
+        self.assertEqual(T.convert_ayah('هَل ۜ لَّكَ'), 'হাল্ '+T.SAKT_NOTE+' লাক্')
+        self.assertNotIn('মিশিয়ে', S.spell_ayah('هَل ۜ لَّكَ')[0][1])
+        self.assertEqual(T.convert_ayah('هَل'), 'হাল্')
+        self.assertEqual(T.convert_ayah('هَل لَكَ'), 'হাল্ লাক্')
+        for left,right in [('لَ','لَّ'), ('مُ','مَّ'), ('دَ','تُّ'),
+                           ('مْ','بَّ'), ('طْ','تَّ'), ('وْ','وَّ'), ('نْ','نَّ')]:
+            self.assertFalse(T.merges_into(T.parse_word(left)[0],T.parse_word(right)[0],True))
+        for marks in ['ٰ','ۥ','ۦ','ٓ','۟','ّ','ٌ']:
+            self.assertFalse(T.merges_into(T.parse_word('م'+marks)[0],T.parse_word('مَّ')[0],True))
+        self.assertEqual(T.convert_ayah('هَل ۖ لَّكَ'), 'হাল্লাক্')
+
+    @unittest.skip('SUPERSEDED 5 Nov 2026: expert-panel overhaul changed the corpus on purpose; freshness, Arabic-unchanged and goldens now in overhaul_20261105_test.py')
+    def test_exact_corpus_delta_freshness_and_arabic_preservation(self):
+        expected=['79:18','83:3','83:4','83:14','85:20','89:17','90:8','97:4','104:8','106:4','109:4']
+        source=json.loads((ROOT/'www/data/quran.json').read_text())['suras']
+        report={}
+        for filename,convert in [('pron_bn.json',T.convert_ayah),('spell_bn.json',S.spell_ayah)]:
+            current=json.loads((ROOT/'www/data'/filename).read_text())['suras']
+            old=json.loads((ROOT/'_old/assimilation-20261104-2035/www/data'/(filename+'.bak-20261104-studio')).read_text())['suras']
+            old=upgrade_iya(upgrade_jia(old, filename), filename)
+            if filename == "spell_bn.json":
+                old = {k: [upgrade_old_spelling(rows) for rows in ayahs] for k, ayahs in old.items()}
+            delta=[]
+            for s in source:
+                if s['sura']<78: continue
+                key=str(s['sura'])
+                for i,a in enumerate(s['ayas']):
+                    self.assertEqual(current[key][i],convert(a['t']))
+                    if current[key][i]!=old[key][i]:
+                        delta.append(f'{key}:{i+1}')
+                    if filename=='spell_bn.json':
+                        self.assertEqual([r[0] for r in current[key][i]],[r[0] for r in old[key][i]])
+            self.assertEqual(set(delta),set(expected) | (set(CHANGED_AYAHS) if filename=='pron_bn.json' else set()))
+        self.assertIn(T.SAKT_NOTE, T.convert_ayah(source[82]['ayas'][13]['t']))
+
+if __name__=='__main__': unittest.main()

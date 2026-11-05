@@ -1,0 +1,6 @@
+/* Amiri (SIL OFL 1.1), bundled offline - Arabic subset */
+@font-face {font-family:'Amiri';font-style:normal;font-weight:400;font-display:swap;src:url(Amiri-400-arabic.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC;}
+@font-face {font-family:'Amiri';font-style:normal;font-weight:700;font-display:swap;src:url(Amiri-700-arabic.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC;}
+/* Scheherazade New 4.500 (SIL Global, SIL OFL 1.1, unmodified file, licence OFL-ScheherazadeNew.txt) - MAIN Quran font since 4 Nov:
+   every haraka sits on its own letter (Amiri's stacked ligatures made AI testers misread Fatiha 1:5/1:7 marks) */
+@font-face {font-family:'Scheherazade New';font-style:normal;font-weight:400;font-display:swap;src:url(ScheherazadeNew-Regular.ttf) format('truetype');unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+200C-200F,U+25CC,U+FB50-FDFF,U+FE70-FEFF;}

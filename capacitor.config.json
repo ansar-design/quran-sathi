@@ -1,0 +1,7 @@
+{
+  "appId": "com.amirahsworld.qurantutor",
+  "appName": "কুরআন সাথী",
+  "webDir": "www",
+  "backgroundColor": "#F4F1EA",
+  "android": { "allowMixedContent": false, "captureInput": true, "webContentsDebuggingEnabled": false }
+}
