@@ -1,7 +1,7 @@
 /* কুরআন সাথী — full Quran (114 suras) reading + qari + recording + Juz Amma hifz plan. No ads, no tracking.
    Quran text: www/data/quran.json (Tanzil Uthmani, verbatim). Qari audio: Juz Amma bundled offline; other suras streamed
-   or downloaded per sura into the phone (Filesystem, Data dir) from cdn.islamic.network (MD 3 Nov). Mistake detection (tier 1 on-device model) is NOT in this build:
-   the feedback screen says so honestly instead of showing fake results. */
+   or downloaded per sura into the phone (Filesystem, Data dir) from cdn.islamic.network (MD 3 Nov). Experimental on-device WORD check (6 Nov 2026, lib/ai_check.js): missed/different words only, no
+   pronunciation or tajweed judgement, labelled experimental; learner-voice accuracy still VERIFY. */
 (function () {
   'use strict';
   var SPELL_NOTE = 'পরীক্ষামূলক বানান: আলিফের উপর বা নিচে হামযা থাকলে এখানে «হামযা» বলা হয়েছে। তানবীনের মূল ধ্বনি আন্/ইন্/উন্ — শেষে ন্ থাকে। থামলে বা পরের শব্দের সঙ্গে মিলিয়ে পড়লে নিয়ম বদলায়। বানান জুড়ে পুরো আয়াত পড়বেন না; ক্বারীর তিলাওয়াত শুনুন ও শিক্ষককে দিয়ে মিলিয়ে নিন।';
@@ -84,10 +84,14 @@
   // Progress safety copy (5 Nov device test: a damaged WebView storage lost saved Hifz after restart).
   // Hifz/Learn progress is also written to a small file in app storage; if the WebView copy is missing it is restored.
   function mirror(k, v) { if (FS && FS.writeFile) FS.writeFile({ path: 'state/' + k + '.json', data: v, directory: 'DATA', encoding: 'utf8', recursive: true }).catch(function () {}); }
+  // 6 Nov judge fix: a present but damaged WebView copy (not valid JSON object) is also replaced from the safety file.
+  function goodJson(v) { try { var o = JSON.parse(v); return !!o && typeof o === 'object' && !Array.isArray(o); } catch (e) { return false; } }
   if (FS && FS.readFile) ['hifz', 'learn-v1'].forEach(function (k) {
-    if (store(k) !== null) return;
+    var cur = store(k);
+    if (cur !== null && goodJson(cur)) return;
     FS.readFile({ path: 'state/' + k + '.json', directory: 'DATA', encoding: 'utf8' }).then(function (r) {
-      if (store(k) === null && r && typeof r.data === 'string' && r.data.charAt(0) === '{') { store(k, r.data); if (data && (view.name === 'hifz' || view.name === 'learn')) render(); }
+      var now = store(k);
+      if ((now === null || !goodJson(now)) && r && typeof r.data === 'string' && goodJson(r.data)) { store(k, r.data); if (data && (view.name === 'hifz' || view.name === 'learn')) render(); }
     }).catch(function () {});
   });
   function qariSrc(s, a, i) {
@@ -426,7 +430,7 @@
       var selected = document.querySelector('.ayah.sel'); if (selected) selected.scrollIntoView({ block: 'center' });
       startQari();   // the button says "শুনি" - start the qari too (5 Nov device test: it opened silently)
     }, main);
-    main.appendChild(el('p', 'muted', 'পড়ার পর পিছনে চাপলে এই ধাপে ফিরে আসবেন। অ্যাপ উচ্চারণ যাচাই করে না। অগ্রগতি এই ফোনে থাকে; অ্যাপ মুছলে হারাবে।'));
+    main.appendChild(el('p', 'muted', 'পড়ার পর পিছনে চাপলে এই ধাপে ফিরে আসবেন। অ্যাপ উচ্চারণ বা তাজবীদ যাচাই করে না (রেকর্ডের পর পরীক্ষামূলক AI শুধু শব্দ মেলায়)। অগ্রগতি এই ফোনে থাকে; অ্যাপ মুছলে হারাবে।'));
     if (p.step < 4) btn('অনুশীলন করেছি · পরের ধাপ', '', function () { save({ sura: p.sura, ayah: p.ayah, step: p.step + 1 }); }, main);
     else if (p.ayah + 1 < s.ayas.length) btn('পরের আয়াত শিখি', '', function () { save({ sura: p.sura, ayah: p.ayah + 1, step: 0 }); }, main);
     else main.appendChild(el('p', 'ok', 'এই সূরার শেষ আয়াত। আবার অনুশীলন করুন বা উপরে অন্য সূরা বাছুন।'));
@@ -497,7 +501,7 @@
     var h = hzLoad(), lessons = HifzPlan.buildLessons(hzSuras(), h.size, h.order);
     if (h.done > lessons.length) h.done = lessons.length;
     var di = Math.max(0, dayNo(today()) - dayNo(h.start)), p = HifzPlan.dayPlan(lessons, h.done, di);
-    main.appendChild(el('div', 'note', 'এটি মুখস্থের রুটিন। পারলাম কি না আপনি নিজে ঠিক করেন; অ্যাপ আপনার তিলাওয়াত যাচাই করে না। আলেম বা ক্বারীর বিকল্প নয়।'));
+    main.appendChild(el('div', 'note', 'এটি মুখস্থের রুটিন। পারলাম কি না আপনি নিজে ঠিক করেন। সূরায় রেকর্ডের পর পরীক্ষামূলক AI শুধু শব্দ বাদ পড়ল কি না দেখায়, উচ্চারণ বা তাজবীদ নয়। আলেম বা ক্বারীর বিকল্প নয়।'));
     var top = el('div', 'card hz'); top.appendChild(el('h2', null, 'অগ্রগতি'));
     top.appendChild(el('p', null, 'মুখস্থ সবক: ' + h.done + ' / ' + lessons.length));
     if (h.markedOn === today() && h.done > 0) {
@@ -662,6 +666,13 @@
     var hb = btn(pgHide ? 'না দেখে পড়ি ✓' : 'না দেখে পড়ি', 'alt', function () { pgHide = !pgHide; pgShown = {}; store('pghide', pgHide ? '1' : '0'); render(); }, head);
     hb.setAttribute('aria-pressed', pgHide ? 'true' : 'false');
     main.appendChild(head);
+    if (pgHide && window.PageCheck && window.AiCheck) btn('🎙 পুরো পাতা শোনান', '', function () {
+      stopActive();
+      window.PageCheck.open(pg, items.map(function (it) {
+        var a = it.s.ayas[it.i];
+        return { sura: it.s.sura, ayah: a.n, text: a.t, name: BN_NAMES[it.s.sura] || it.s.name_ar };
+      }));
+    }, main);
     main.appendChild(el('p', 'muted', pgHide
       ? 'আয়াত ঢাকা আছে: মুখে বলুন, তারপর আয়াতে চাপ দিয়ে মিলিয়ে নিন।'
       : '15 লাইনের হাফেজি কুরআনের এই পাতার আয়াতগুলো। লাইন ভাঙা ছাপার মতো নয়। আয়াতে চাপ দিলে সূরায় গিয়ে রেকর্ড, বানান ও উচ্চারণ পাবেন।'));
@@ -702,6 +713,8 @@
     drawPageBar(items);
   }
 
+  // Typos in the Tanzil Bangla source: text is shown unchanged (licence), with a short note under it.
+  var TR_NOTE = { '79:31': 'অনুবাদের উৎসে ছাপার ভুল: “ঘাম” নয়। আরবি مَرْعَىٰ অর্থ চারণভূমি / ঘাস (পানি ও ঘাস)।' };
   function renderSura() {
     var s = curSura();
     // One local record keeps sura and ayah together, including Learn/Hifz and qari advancement.
@@ -749,7 +762,10 @@
         });
         b.appendChild(sp);
       }
-      if (showMean && bnTr && bnTr.suras[s.sura] && bnTr.suras[s.sura][i]) b.appendChild(el('span', 'mean', bnTr.suras[s.sura][i]));
+      if (showMean && bnTr && bnTr.suras[s.sura] && bnTr.suras[s.sura][i]) {
+        b.appendChild(el('span', 'mean', bnTr.suras[s.sura][i]));
+        if (TR_NOTE[s.sura + ':' + a.n]) b.appendChild(el('span', 'mean trnote', TR_NOTE[s.sura + ':' + a.n]));
+      }
       var ap = s.sura >= 78 && pg15 && pageStart(s.sura, a.n);
       b.appendChild(el('span', 'n', 'আয়াত নম্বর ' + a.n + (ap ? ' · হাফেজি পাতা ' + ap + ' শুরু' : '') + (i === sel ? ' · বাছাই করা হয়েছে — নিচে ক্বারী চাপুন' : '')));
       b.setAttribute('aria-pressed', i === sel ? 'true' : 'false');
@@ -822,9 +838,9 @@
   function aiNotice(go) {
     if (store('ai-ok') === '1') return go();
     var ov = el('div', 'ov'), box = el('div', 'card');
-    box.appendChild(el('h2', null, 'AI দিয়ে মিলিয়ে দেখা'));
+    box.appendChild(el('h2', null, 'AI দিয়ে মিলিয়ে দেখা (পরীক্ষামূলক)'));
     box.appendChild(el('p', null, 'আপনার রেকর্ড শুনে AI দেখাবে কোন শব্দ ঠিক শুনেছে, কোনটা বাদ গেছে বা অন্যরকম শুনেছে।'));
-    box.appendChild(el('p', 'aibul', '• AI ভুল করতে পারে। এটা শুধু সাহায্য, উস্তাদ বা ক্বারীর বিকল্প নয়।\n• শুধু শব্দ মেলায়, তাজবীদ (মাদ্দ, গুন্নাহ) বিচার করে না।\n• পুরো কাজ ফোনেই হয়, ইন্টারনেট লাগে না, আপনার কণ্ঠ কোথাও যায় না।'));
+    box.appendChild(el('p', 'aibul', '• পরীক্ষামূলক: আসল শিক্ষার্থীর কণ্ঠে এখনো পুরো যাচাই হয়নি। AI ভুল করতে পারে, বিশেষ করে বাচ্চাদের কণ্ঠে। এটা শুধু সাহায্য, উস্তাদ বা ক্বারীর বিকল্প নয়।\n• শুধু শব্দ মেলায়, তাজবীদ (মাদ্দ, গুন্নাহ) বিচার করে না।\n• পুরো কাজ ফোনেই হয়, ইন্টারনেট লাগে না, আপনার কণ্ঠ কোথাও যায় না।'));
     var row = el('div', 'row');
     btn('এখন নয়', 'alt', function () { ov.remove(); }, row);
     btn('বুঝেছি, মিলাই', '', function () { ov.remove(); store('ai-ok', '1'); go(); }, row);
@@ -855,7 +871,7 @@
     } else {
       var bad = r.total - r.ok;
       box.appendChild(el('p', 'aisum ' + (r.allOk ? 'good' : 'warn'), r.allOk ? 'মাশাআল্লাহ! সব ' + r.total + 'টি শব্দ ঠিকঠাক শোনা গেছে।'
-        : (bad ? bad + 'টি শব্দ মেলেনি' : 'সব শব্দ মিলেছে') + (r.extra.length ? (bad ? ', আর ' : ', তবে ') + r.extra.length + 'টি বাড়তি শব্দ শোনা গেছে' : '') + '। ক্বারীর তিলাওয়াত শুনে আবার চেষ্টা করুন।'));
+        : (bad ? bad + 'টি শব্দ AI ঠিকমতো মেলাতে পারেনি' : 'সব শব্দ মিলেছে') + (r.extra.length ? (bad ? ', আর ' : ', তবে ') + r.extra.length + 'টি বাড়তি শব্দ শোনা গেছে' : '') + '। ক্বারীর তিলাওয়াত শুনে আবার পড়ে দেখুন; AI নিজেও ভুল শুনতে পারে।'));
       var fl = el('div', 'aiwords'); fl.lang = 'ar'; fl.dir = 'rtl';
       r.words.forEach(function (w) {
         var sp = el('span', 'aiw ' + w.status, w.word);
@@ -940,8 +956,8 @@
     var c = el('div', 'card'); c.appendChild(el('h2', null, 'সূরা ' + (BN_NAMES[s.sura] || s.name_ar) + ' · আয়াত ' + a.n));
     var ay = el('div', 'ayah'); ay.appendChild(el('span', 't', a.t)); c.appendChild(ay); main.appendChild(c);
     var f = el('div', 'card');
-    f.appendChild(el('h2', null, 'ভুল ধরার সুবিধা এখনো চালু হয়নি'));
-    f.appendChild(el('p', null, 'এই সংস্করণে আপনার তিলাওয়াত যাচাই করা হয় না। আমরা কোনো বানানো ফলাফল দেখাই না। যাচাই করার সুবিধা পরের সংস্করণে আসবে।'));
+    f.appendChild(el('h2', null, 'উচ্চারণ ও তাজবীদ যাচাই এখনো নেই'));
+    f.appendChild(el('p', null, 'এই সংস্করণে উচ্চারণ ও তাজবীদ যাচাই হয় না; আমরা কোনো বানানো ফলাফল দেখাই না। রেকর্ডের পর ‘✓ AI দিয়ে মিলান’ শুধু শব্দ মেলায় (পরীক্ষামূলক)।'));
     f.appendChild(el('p', 'muted', 'এখন যা করতে পারেন: নিজের রেকর্ডিং শুনে আয়াতের সাথে মিলিয়ে নিন, বা কোনো ক্বারীর তিলাওয়াতের সাথে তুলনা করুন। আপনার রেকর্ডিং ফোনের বাইরে যায় না এবং অ্যাপ বন্ধ করলে মুছে যায়।'));
     main.appendChild(f);
     bar.hidden = false;
@@ -953,7 +969,7 @@
     var c = el('div', 'card');
     c.appendChild(el('h2', null, 'কুরআন সাথী'));
     c.appendChild(el('p', null, 'পুরো কুরআনের ১১৪টি সূরা পড়ুন, বাংলা অর্থ দেখুন, ক্বারীর তিলাওয়াত শুনুন, নিজের তিলাওয়াত রেকর্ড করে শুনুন। বিজ্ঞাপন নেই, সম্পূর্ণ বিনামূল্যে।'));
-    c.appendChild(el('p', null, 'এই সংস্করণে তিলাওয়াতের ভুল ধরার কোনো সুবিধা নেই। এটি শুধু অনুশীলনের সহায়ক; আলেম বা ক্বারীর বিকল্প নয়। সন্দেহ হলে যোগ্য শিক্ষকের কাছে যাচাই করুন।'));
+    c.appendChild(el('p', null, 'পরীক্ষামূলক AI শব্দ-মিলানো: রেকর্ডের পর AI দেখায় কোন শব্দ বাদ পড়েছে বা অন্যরকম শোনা গেছে। এটি উচ্চারণ ও তাজবীদ বিচার করে না, আসল শিক্ষার্থীর কণ্ঠে এখনো পুরো যাচাই হয়নি, ভুল করতে পারে। এটি শুধু অনুশীলনের সহায়ক; আলেম বা ক্বারীর বিকল্প নয়। সন্দেহ হলে যোগ্য শিক্ষকের কাছে যাচাই করুন।'));
     c.appendChild(el('p', null, 'ক্বারী শেখ মাহমুদ খলীল আল-হুসারী (রহ.)-এর তিলাওয়াত: আমপারা অ্যাপের ভেতরেই আছে (ইন্টারনেট লাগে না); অন্য সূরা ইন্টারনেটে বাজে, অথবা সূরা ধরে ডাউনলোড করে ইন্টারনেট ছাড়া শোনা যায়; প্রতি আয়াত ১, ৩, ৫ বা ১০ বার শুনে পরের আয়াতে যায়। অডিও: Islamic Network / alquran.cloud। এটি রেকর্ডিং, কৃত্রিম বুদ্ধিমত্তার তৈরি কণ্ঠ নয়।'));
     c.appendChild(el('p', 'muted', 'বাংলা অর্থ: মুহিউদ্দীন খান-এর অনুবাদ (Tanzil.net থেকে, অপরিবর্তিত)। http://tanzil.net/trans/ । অনুবাদ কুরআনের পূর্ণ ব্যাখ্যা নয়; বুঝতে অসুবিধা হলে আলেমের কাছে জানুন।'));
     c.appendChild(el('p', 'muted', 'কুরআনের আরবি পাঠ: Tanzil.net (Uthmani, v1.1), লাইসেন্স CC BY 3.0। আরবি অক্ষর ও হরকত অপরিবর্তিত (ওয়াকফ-চিহ্ন সহ)। ভুল পেলে উপরের "মতামত" বোতামে জানান।'));

@@ -6,7 +6,7 @@
  */
 (function () {
   'use strict';
-  var asrP = null;
+  var asrP = null, checking = false;
   function load(onStage) {
     if (asrP) return asrP;
     onStage && onStage('load');
@@ -33,6 +33,8 @@
     });
   }
   function check(url, refText, onStage) {
+    if (checking) return Promise.reject(new Error('AI check already running'));
+    checking = true;
     return Promise.all([load(onStage), pcm16k(url)]).then(function (r) {
       var asr = r[0], audio = r[1];
       if (audio.length < 16000 * 0.6) return { tooShort: true };
@@ -44,7 +46,7 @@
         var res = window.ReciteCheck.compare(refText, o && o.text);
         res.heard = o && o.text; return res;
       });
-    });
+    }).finally(function () { checking = false; });
   }
   window.AiCheck = { check: check, warm: load };
 })();
