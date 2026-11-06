@@ -25,7 +25,7 @@ class AssimilationTests(unittest.TestCase):
         self.assertEqual([r[0] for r in rows], ['هَل', 'لَّكَ'])
         self.assertIn('পরের শব্দের লাম-এর সঙ্গে মিশিয়ে পড়ুন', rows[0][1])
         self.assertIn('লাম-সাকিন-ল্', S.spell_word('هَل'))
-        self.assertIn('মীম-সাকিন (পরের শব্দের মীম-এর সঙ্গে মিশিয়ে পড়ুন)', S.spell_ayah('هُم مَّا')[0][1])
+        self.assertIn('মীম-চিহ্ন নেই (মিলিয়ে পড়লে পরের শব্দের মীম-এর সঙ্গে মিশিয়ে পড়ুন; গুন্নাহসহ)', S.spell_ayah('هُم مَّا')[0][1])
 
     def test_boundaries_and_negative_cases(self):
         self.assertEqual(T.convert_ayah('هَل ۜ لَّكَ'), 'হাল্ '+T.SAKT_NOTE+' লাক্')

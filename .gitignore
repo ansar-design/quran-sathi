@@ -16,3 +16,11 @@ android/capacitor-cordova-android-plugins/build/
 __pycache__/
 .DS_Store
 .venv/
+
+# on-device AI check: model + runtime are built locally (tools/ai/install.sh), too big for git
+www/models/
+www/vendor/
+tools/ai/out_fp32/
+tools/ai/model-base/
+tools/ai/node_modules/
+tools/ai/package-lock.json

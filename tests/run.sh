@@ -9,6 +9,7 @@ node "$D/hifz_plan.test.js"
 node "$D/audio_map.test.js"
 node "$D/tajweed.test.js"
 node "$D/pages15.test.js"
+node "$D/recite_check.test.js"
 node "$D/words_audio.test.js"
 node "$D/quran.test.js"
 node "$D/qari_url.test.js"
@@ -61,3 +62,5 @@ python3 "$D/silah_hamza_test.py"
 node "$D/reading_resume.test.js"
 
 python3 "$D/medial_ya_test.py"
+
+python3 "$D/iqlab_spelling_test.py"

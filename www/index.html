@@ -19,11 +19,20 @@ header button { background:transparent; border:0; color:inherit; font-size:20px;
 main { max-width:720px; margin:0 auto; padding:14px max(14px,env(safe-area-inset-right)) 180px max(14px,env(safe-area-inset-left)); display:grid; gap:12px; }
 .card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px; }
 .note { background:var(--warn-soft); color:var(--warn); border-radius:12px; padding:10px 12px; font-size:15px; }
-.suras { display:grid; gap:8px; }
-.sura { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:var(--surface); color:inherit; border:1px solid var(--line); border-radius:12px; padding:10px 14px; min-height:56px; font:inherit; }
+/* Allow long names to reflow without expanding the home grid at large text sizes. */
+.list-view { grid-template-columns:minmax(0,1fr); }
+.list-view > * { min-width:0; }
+.list-view > .btn, .list-view .sura-search .btn { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
+.suras { display:grid; grid-template-columns:minmax(0,1fr); min-width:0; gap:8px; }
+.sura-search { display:grid; gap:6px; min-width:0; }
+.sura-search label { font-weight:600; }
+.sura-search input { width:100%; min-width:0; min-height:48px; font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
+.sura-search .btn { justify-self:start; }
+.sura-search input:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+.sura { display:flex; flex-wrap:wrap; align-items:center; gap:12px; width:100%; text-align:left; background:var(--surface); color:inherit; border:1px solid var(--line); border-radius:12px; padding:10px 14px; min-height:56px; font:inherit; }
 .sura .no { background:var(--accent-soft); color:var(--accent); border-radius:50%; width:36px; height:36px; display:grid; place-items:center; font-weight:600; flex:none; font-size:15px; }
-.sura .bn { flex:1; font-weight:600; } .sura .meta { color:var(--muted); font-size:14px; }
-.sura .ar { font:26px/1.4 var(--f-ar); direction:rtl; }
+.sura .bn { flex:1 1 120px; min-width:0; overflow-wrap:anywhere; font-weight:600; } .sura .meta { color:var(--muted); font-size:14px; }
+.sura .ar { max-width:100%; margin-left:auto; font:26px/1.4 var(--f-ar); direction:rtl; }
 .ayah { display:block; width:100%; text-align:right; background:var(--surface); color:inherit; border:2px solid var(--line); border-radius:14px; padding:14px; font:inherit; }
 .ayah.sel { border-color:var(--accent); background:var(--accent-soft); }
 .ayah .t { font:var(--az,32px)/2.1 var(--f-ar); direction:rtl; display:block; }
@@ -54,6 +63,11 @@ button[aria-label="মতামত"] { top:calc(8px + env(safe-area-inset-top,0p
 .lesson { display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:var(--surface); color:inherit; border:1px solid var(--line); border-radius:12px; padding:10px 14px; min-height:52px; font:inherit; margin-top:6px; }
 .lesson .bn { flex:1; } .lesson .ar { font:24px/1.4 var(--f-ar); direction:rtl; }
 .hz h2 { margin-top:2px; } .hz select { font:inherit; padding:8px; border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); min-height:44px; }
+/* Keep all four idle actions aligned; let full Bangla labels reflow inside cells. */
+.practice-controls { flex:0 0 100%; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; max-width:720px; }
+.practice-controls .btn { min-width:0; min-height:44px; padding:8px 4px; font-size:1em; white-space:normal; overflow-wrap:anywhere; }
+@media (max-width:359px) { .practice-controls { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.bar.compact .practice-controls .btn { min-height:44px; }
 .bar .hint { flex-basis:100%; text-align:center; font-size:13px; margin:0; }
 .juzh { font-size:16px; color:var(--accent); margin:14px 2px 2px; scroll-margin-top:80px; }
 .pghead { margin:8px 0; } .pghead .btn { flex:none; padding:8px 14px; min-height:44px; }
@@ -105,6 +119,15 @@ dialog.bn-dialog::backdrop { background:rgba(0,0,0,.5); }
 .bn-dialog h2 { margin-top:0; } .bn-dialog p { white-space:pre-line; }
 .bn-dialog input { box-sizing:border-box; width:100%; font:inherit; padding:12px; }
 .bn-dialog .row { flex-wrap:wrap; } .bn-dialog button { min-height:48px; }
+.aibox{max-height:85vh;overflow:auto}
+.aibul{white-space:pre-line}
+.aiwords{font-family:var(--f-ar);font-size:calc(var(--az,28px)*.9);line-height:2.1;margin:.6em 0;text-align:right}
+.aiw{padding:0 .15em;border-radius:6px}
+.aiw.ok{background:#dcf3e1;color:#14532d}
+.aiw.wrong{background:#fde2e1;color:#991b1b;text-decoration:underline wavy}
+.aiw.missed{background:#fdebc8;color:#92400e;text-decoration:line-through}
+.aisum{font-weight:700}.aisum.good{color:#15803d}.aisum.warn{color:#b45309}
+@media (prefers-color-scheme: dark){.aiw.ok{background:#173d24;color:#bff0cd}.aiw.wrong{background:#4a1d1b;color:#ffc9c4}.aiw.missed{background:#46330f;color:#fbd38d}.aisum.good{color:#7ddc9a}.aisum.warn{color:#f5b85c}}
 </style>
 </head>
 <body>
@@ -118,6 +141,8 @@ window.APP_FEEDBACK = { app:'কুরআন সাথী', pkg:'com.amirahsworl
 <script src="lib/hifz_plan.js"></script>
 <script src="lib/learn_path.js"></script>
 <script src="lib/bangla_dialog.js"></script>
+<script src="lib/recite_check.js"></script>
+<script src="lib/ai_check.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

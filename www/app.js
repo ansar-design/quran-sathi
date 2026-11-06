@@ -4,7 +4,7 @@
    the feedback screen says so honestly instead of showing fake results. */
 (function () {
   'use strict';
-  var SPELL_NOTE = 'পরীক্ষামূলক বানান: তানবীনের মূল ধ্বনি আন্/ইন্/উন্ — শেষে ন্ থাকে। থামলে বা পরের শব্দের সঙ্গে মিলিয়ে পড়লে নিয়ম বদলায়। বানান জুড়ে পুরো আয়াত পড়বেন না; ক্বারীর তিলাওয়াত শুনুন ও শিক্ষককে দিয়ে মিলিয়ে নিন।';
+  var SPELL_NOTE = 'পরীক্ষামূলক বানান: আলিফের উপর বা নিচে হামযা থাকলে এখানে «হামযা» বলা হয়েছে। তানবীনের মূল ধ্বনি আন্/ইন্/উন্ — শেষে ন্ থাকে। থামলে বা পরের শব্দের সঙ্গে মিলিয়ে পড়লে নিয়ম বদলায়। বানান জুড়ে পুরো আয়াত পড়বেন না; ক্বারীর তিলাওয়াত শুনুন ও শিক্ষককে দিয়ে মিলিয়ে নিন।';
   var BN_NAMES = { 1:'আল-ফাতিহা',2:'আল-বাকারাহ',3:'আলে ইমরান',4:'আন-নিসা',5:'আল-মায়িদাহ',6:'আল-আন‘আম',7:'আল-আ‘রাফ',8:'আল-আনফাল',9:'আত-তাওবাহ',
     10:'ইউনুস',11:'হূদ',12:'ইউসুফ',13:'আর-রা‘দ',14:'ইবরাহীম',15:'আল-হিজর',16:'আন-নাহল',17:'আল-ইসরা',18:'আল-কাহফ',19:'মারইয়াম',20:'ত্বোয়া-হা',
     21:'আল-আম্বিয়া',22:'আল-হাজ্জ',23:'আল-মু’মিনূন',24:'আন-নূর',25:'আল-ফুরকান',26:'আশ-শু‘আরা',27:'আন-নামল',28:'আল-কাসাস',29:'আল-আনকাবূত',30:'আর-রূম',
@@ -260,7 +260,7 @@
 
   function render() {
     clear();
-    main.className = view.name === 'learn' ? 'learn-view' : '';
+    main.className = view.name === 'learn' ? 'learn-view' : view.name === 'list' ? 'list-view' : '';
     back.hidden = view.name === 'list' || view.name === 'hifz';
     if (!data) { main.appendChild(el('p', 'muted', 'লোড হচ্ছে…')); return; }
     if (view.name === 'list') return renderList();
@@ -272,6 +272,16 @@
     if (view.name === 'about') return renderAbout();
   }
 
+  // Search keys only: never normalize the displayed Quran text or names.
+  var listQuery = '';
+  function suraSearchKey(value) {
+    return String(value).normalize('NFC').toLowerCase()
+      .replace(/[০-৯]/g, function (c) { return String(c.charCodeAt(0) - 0x09e6); })
+      .replace(/[٠-٩]/g, function (c) { return String(c.charCodeAt(0) - 0x0660); })
+      .replace(/[۰-۹]/g, function (c) { return String(c.charCodeAt(0) - 0x06f0); })
+      .replace(/[\u064b-\u065f\u0670\u06d6-\u06ed]/g, '')
+      .replace(/[أإآٱ]/g, 'ا').replace(/[\s\-–—'’‘ـ]/g, '');
+  }
   function renderList() {
     title.textContent = 'কুরআন সাথী';
     var n = el('div', 'note', 'এটি শেখার সহায়ক। আয়াত পড়ুন, নিজের তিলাওয়াত রেকর্ড করে নিজে শুনুন। কোনো আলেম বা ক্বারীর বিকল্প নয়।');
@@ -296,21 +306,48 @@
     var js = el('select'); js.id = 'juz'; js.setAttribute('aria-label', 'পারা বাছুন');
     data.juz.forEach(function (j, k) { var o = el('option', null, 'পারা ' + bn(k + 1) + ' · ' + (BN_NAMES[j[0]] || '') + (j[1] > 1 ? ' ' + bn(j[1]) : '')); o.value = k + 1; js.appendChild(o); });
     var ph = el('option', null, 'পারা বাছুন'); ph.value = ''; js.insertBefore(ph, js.firstChild); js.value = '';
-    js.onchange = function () { if (!js.value) return; var e = $('sura-' + data.juz[js.value - 1][0]); if (e && e.scrollIntoView) e.scrollIntoView({ block: 'center' }); };
-    jr.appendChild(js); btn('আমপারা', 'alt', function () { var e = $('juz-30'); if (e) e.scrollIntoView({ block: 'start' }); }, jr);
+    js.onchange = function () { if (!js.value) return; clearSearch(false); var e = $('sura-' + data.juz[js.value - 1][0]); if (e && e.scrollIntoView) e.scrollIntoView({ block: 'center' }); };
+    jr.appendChild(js); btn('আমপারা', 'alt', function () { clearSearch(false); var e = $('juz-30'); if (e) e.scrollIntoView({ block: 'start' }); }, jr);
     main.appendChild(jr);
-    var list = el('div', 'suras');
+    var search = el('div', 'sura-search');
+    var label = el('label', null, 'সূরা খুঁজুন'); label.htmlFor = 'sura-search';
+    var input = el('input'); input.id = 'sura-search'; input.type = 'search';
+    input.placeholder = 'নাম বা নম্বর: ফাতিহা / 1'; input.value = listQuery;
+    input.setAttribute('aria-describedby', 'sura-search-help');
+    input.setAttribute('autocomplete', 'off'); input.setAttribute('autocapitalize', 'off');
+    var help = el('p', 'muted', 'বাংলা বা আরবি নাম, অথবা সূরার নম্বর লিখুন।'); help.id = 'sura-search-help';
+    search.appendChild(label); search.appendChild(input); search.appendChild(help);
+    var clear = btn('সব সূরা দেখান', 'alt', function () { clearSearch(true); }, search);
+    var status = el('p', 'muted'); status.id = 'sura-search-status'; status.setAttribute('role', 'status');
+    search.appendChild(status); main.appendChild(search);
+    var list = el('div', 'suras'), rows = [], headings = [];
+    function clearSearch(focus) { input.value = ''; listQuery = ''; filterSuras(); if (focus) input.focus(); }
+    function filterSuras() {
+      listQuery = input.value;
+      var key = suraSearchKey(listQuery), count = 0;
+      rows.forEach(function (row) {
+        var match = !key || (/^[0-9]+$/.test(key)
+          ? Number(key) === row.number
+          : row.name.indexOf(key) !== -1 || row.arabic.indexOf(key) !== -1);
+        row.element.hidden = !match; if (match) count++;
+      });
+      headings.forEach(function (heading) { heading.hidden = !!key; });
+      clear.hidden = !listQuery;
+      status.textContent = !key ? '' : count ? bn(count) + 'টি সূরা পাওয়া গেছে' : 'সূরা পাওয়া যায়নি। নামের কিছু অংশ বা 1–114 নম্বর লিখুন।';
+    }
+    input.oninput = filterSuras;
     var lastJ = 0;
     data.suras.forEach(function (s) {
       var j1 = juzOf(s.sura, 1), j2 = juzOf(s.sura, s.ayas.length);
-      if (j1 !== lastJ) { var h = el('h2', 'juzh', 'পারা ' + bn(j1) + (j1 === 30 ? ' (আমপারা)' : '')); h.id = 'juz-' + j1; list.appendChild(h); lastJ = j1; }
+      if (j1 !== lastJ) { var h = el('h2', 'juzh', 'পারা ' + bn(j1) + (j1 === 30 ? ' (আমপারা)' : '')); h.id = 'juz-' + j1; list.appendChild(h); headings.push(h); lastJ = j1; }
       var b = el('button', 'sura'); b.id = 'sura-' + s.sura; b.onclick = function () { go({ name: 'sura', sura: s.sura }); };
       b.appendChild(el('span', 'no', bn(s.sura)));
       var mid = el('span', 'bn', BN_NAMES[s.sura] || s.name_ar); mid.appendChild(el('div', 'meta', s.ayas.length + ' আয়াত · সূরা ' + s.sura + ' · পারা ' + bn(j1) + (j2 > j1 ? '–' + bn(j2) : '') + (s.sura < 78 && isDl(s.sura) ? ' · ✓ ডাউনলোড' : '')));
       b.appendChild(mid); b.appendChild(el('span', 'ar', s.name_ar));
       list.appendChild(b);
+      rows.push({ element: b, number: s.sura, name: suraSearchKey(BN_NAMES[s.sura] || ''), arabic: suraSearchKey(s.name_ar) });
     });
-    main.appendChild(list);
+    main.appendChild(list); filterSuras();
   }
 
   function juzOf(sura, ayah) { var k = 0; data.juz.forEach(function (j, i) { if (j[0] < sura || (j[0] === sura && j[1] <= ayah)) k = i; }); return k + 1; }
@@ -697,7 +734,7 @@
     if (showTj && tajweed && tajweed.suras[s.sura]) vw.appendChild(tjLegend(s.sura));
     if (s.sura < 78) { var dbx = el('div', 'dlbox'); dbx.id = 'dlbox'; main.appendChild(dbx); }
     if (s.sura !== 1 && s.sura !== 9) main.appendChild(el('div', 'bism', '\u0628\u0650\u0633\u0652\u0645\u0650 \u0671\u0644\u0644\u0651\u064e\u0647\u0650 \u0671\u0644\u0631\u0651\u064e\u062d\u0652\u0645\u064e\u0640\u0670\u0646\u0650 \u0671\u0644\u0631\u0651\u064e\u062d\u0650\u064a\u0645\u0650'));
-    if (showPron && pron && pron.suras[s.sura]) main.appendChild(el('p', 'pronnote', 'পরীক্ষামূলক: কোনো আলেম/ক্বারী এখনো যাচাই করেননি। বাংলা উচ্চারণ শুধু সহায়ক — সঠিক উচ্চারণ আরবিতে; ক্বারীর তিলাওয়াত শুনে মিলিয়ে নিন। ঁ = নাকে গুন্নাহসহ (ইখফা/ইদগাম); ’ = হামযার আলাদা ধ্বনি (এখানে থামবেন না)। ইকলাব ‘ম’ আর ইখফা/ইদগামের গুন্নাহ ‘ঁ’ দিয়ে মোটামুটি দেখানো হয়েছে; কিন্তু টানের মাপ (মাদ্দ ২/৪/৬), গুন্নাহর দৈর্ঘ্য ও কলকলা বাংলা অক্ষরে দেখানো যায় না: এগুলো জানতে ‘দেখার ধরন’-এ ‘তাজবীদ রং’ চালু করুন।'));
+    if (showPron && pron && pron.suras[s.sura]) main.appendChild(el('p', 'pronnote', 'পরীক্ষামূলক: কোনো আলেম/ক্বারী এখনো যাচাই করেননি। বাংলা উচ্চারণ শুধু সহায়ক — সঠিক উচ্চারণ আরবিতে; ক্বারীর তিলাওয়াত শুনে মিলিয়ে নিন। ঁ = নাকে গুন্নাহসহ (ইখফা/ইদগাম); ‘ = আইন (ع), ’ = হামযা (ء) — দুটি আলাদা আরবি হরফের চিহ্ন; বাদ দেবেন না। এই চিহ্ন দেখে থামবেন না। ক্বারীর কণ্ঠে পার্থক্য শুনে শিক্ষককে দিয়ে মিলিয়ে নিন। ইকলাব ম আর ইখফা/ইদগামের গুন্নাহ ঁ দিয়ে মোটামুটি দেখানো হয়েছে; কিন্তু টানের মাপ (মাদ্দ ২/৪/৬), গুন্নাহর দৈর্ঘ্য ও কলকলা বাংলা অক্ষরে দেখানো যায় না: এগুলো জানতে ‘দেখার ধরন’-এ ‘তাজবীদ রং’ চালু করুন।'));
     if (showSpell && spell && spell.suras[s.sura]) main.appendChild(el('p', 'pronnote', SPELL_NOTE));
     if (showSpell && spell && spell.suras[s.sura] && wordT && s.sura >= 78) main.appendChild(el('p', 'muted', '🔊 বাছাই করা আয়াতের বানানে যেকোনো শব্দে চাপ দিলে ক্বারী হুসারির কণ্ঠে শব্দটি শুনবেন।'));
     s.ayas.forEach(function (a, i) {
@@ -754,12 +791,15 @@
       var tk = curTake();
       if (qp) { btn('■ ক্বারী থামান', 'rec', function () { stopQari(); qRep = 0; drawBar(); }, bar); bar.appendChild(el('span', 'timer', qBism ? 'বিসমিল্লাহ · তারপর আয়াত ' + bnCount(curSura().ayas[sel].n) : 'আয়াত ' + bnCount(curSura().ayas[sel].n) + ' · শুনছেন ' + bnCount(qRep + 1) + '/' + bnCount(QREPS[qri]) + ' বার' + (slow ? ' · ধীরে' : ''))); return; }
       if (qFinished) { var finished = el('div', 'hint', 'সূরার শেষ আয়াত পর্যন্ত শোনা হয়েছে। এই আয়াত আবার শুনতে ক্বারী চাপুন।'); finished.setAttribute('role', 'status'); bar.appendChild(finished); }
-      btn('🔊 ক্বারী', 'alt', startQari, bar);
-      var sb = btn(slow ? 'ধীরে ✓' : 'ধীরে', 'alt', function () { slow = !slow; store('slow', slow ? '1' : '0'); drawBar(); }, bar);
+      var controls = el('div', 'practice-controls');
+      bar.appendChild(controls);
+      btn('🔊 ক্বারী', 'alt', startQari, controls);
+      var sb = btn(slow ? 'ধীরে ✓' : 'ধীরে', 'alt', function () { slow = !slow; store('slow', slow ? '1' : '0'); drawBar(); }, controls);
       sb.setAttribute('aria-pressed', slow ? 'true' : 'false');
-      btn('শুনব ' + bnCount(QREPS[qri]) + ' বার', 'alt', function () { qri = (qri + 1) % QREPS.length; store('qrep', String(qri)); drawBar(); }, bar).setAttribute('aria-label', 'প্রতি আয়াত ' + bnCount(QREPS[qri]) + ' বার শোনা; চাপলে সংখ্যা বদলাবে');
-      btn(tk ? '● আবার রেকর্ড' : '● রেকর্ড', '', askMic, bar);
+      btn('শুনব ' + bnCount(QREPS[qri]) + ' বার', 'alt', function () { qri = (qri + 1) % QREPS.length; store('qrep', String(qri)); drawBar(); }, controls).setAttribute('aria-label', 'প্রতি আয়াত ' + bnCount(QREPS[qri]) + ' বার শোনা; চাপলে সংখ্যা বদলাবে');
+      btn(tk ? '● আবার রেকর্ড' : '● রেকর্ড', '', askMic, controls);
       bar.appendChild(el('div', 'muted hint', 'রেকর্ড শুধু এখন শোনার জন্য, অ্যাপ বন্ধ করলে মুছে যায়'));
+      if (tk && window.AiCheck) btn('✓ AI দিয়ে মিলান', '', function () { aiCheck(tk); }, bar).setAttribute('aria-label', 'আমার রেকর্ড করা তিলাওয়াত AI দিয়ে শব্দ ধরে মিলিয়ে দেখুন');
       if (tk) {
         if (player) {
           btn('■ থামুন', 'rec', function () { stopPlay(); drawBar(); }, bar);
@@ -774,6 +814,69 @@
         }
       }
     }
+  }
+
+  // 6 Nov 2026 (MD: built-in AI, beat competitors): on-phone AI check of the learner's own recording, word by word.
+  // AI only listens; it never recites or writes Quran text. Words only, not tajweed. Voice never leaves the phone.
+  var aiBusy = false;
+  function aiNotice(go) {
+    if (store('ai-ok') === '1') return go();
+    var ov = el('div', 'ov'), box = el('div', 'card');
+    box.appendChild(el('h2', null, 'AI দিয়ে মিলিয়ে দেখা'));
+    box.appendChild(el('p', null, 'আপনার রেকর্ড শুনে AI দেখাবে কোন শব্দ ঠিক শুনেছে, কোনটা বাদ গেছে বা অন্যরকম শুনেছে।'));
+    box.appendChild(el('p', 'aibul', '• AI ভুল করতে পারে। এটা শুধু সাহায্য, উস্তাদ বা ক্বারীর বিকল্প নয়।\n• শুধু শব্দ মেলায়, তাজবীদ (মাদ্দ, গুন্নাহ) বিচার করে না।\n• পুরো কাজ ফোনেই হয়, ইন্টারনেট লাগে না, আপনার কণ্ঠ কোথাও যায় না।'));
+    var row = el('div', 'row');
+    btn('এখন নয়', 'alt', function () { ov.remove(); }, row);
+    btn('বুঝেছি, মিলাই', '', function () { ov.remove(); store('ai-ok', '1'); go(); }, row);
+    box.appendChild(row); ov.appendChild(box); document.body.appendChild(ov);
+  }
+  function aiCheck(tk) {
+    if (aiBusy) return;
+    aiNotice(function () {
+      var s = curSura(), i = sel, a = s.ayas[i], myKey = key();
+      stopPlay(); aiBusy = true;
+      var ov = el('div', 'ov'), box = el('div', 'card aibox'); box.setAttribute('role', 'dialog');
+      var st = el('p', 'hint', 'AI চালু হচ্ছে… প্রথমবার একটু সময় লাগে।'); st.setAttribute('role', 'status');
+      box.appendChild(el('h2', null, 'আয়াত ' + a.n + ' · AI দিয়ে মিলানো')); box.appendChild(st);
+      ov.appendChild(box); document.body.appendChild(ov);
+      var t0c = Date.now();
+      window.AiCheck.check(tk, a.t, function (stage) { if (stage === 'listen') st.textContent = 'আপনার তিলাওয়াত শুনছে…'; })
+        .then(function (r) { aiBusy = false; showAi(box, ov, r, s, i, myKey, Date.now() - t0c); })
+        .catch(function () { aiBusy = false; st.textContent = 'AI চালু করা যায়নি। অ্যাপ বন্ধ করে আবার খুলে চেষ্টা করুন।'; var row = el('div', 'row'); btn('বন্ধ', 'alt', function () { ov.remove(); }, row); box.appendChild(row); });
+    });
+  }
+  function showAi(box, ov, r, s, i, myKey, ms) {
+    box.textContent = '';
+    var a = s.ayas[i];
+    box.appendChild(el('h2', null, 'আয়াত ' + a.n + ' · AI দিয়ে মিলানো'));
+    var row = el('div', 'row');
+    if (r.tooShort || r.silent) {
+      box.appendChild(el('p', null, r.silent ? 'রেকর্ডে কোনো আওয়াজ পাওয়া যায়নি। ফোন মুখের কাছে রেখে জোরে পড়ে আবার রেকর্ড করুন।' : 'রেকর্ড খুব ছোট। পুরো আয়াত পড়ে আবার রেকর্ড করুন।'));
+    } else {
+      var bad = r.total - r.ok;
+      box.appendChild(el('p', 'aisum ' + (r.allOk ? 'good' : 'warn'), r.allOk ? 'মাশাআল্লাহ! সব ' + r.total + 'টি শব্দ ঠিকঠাক শোনা গেছে।'
+        : (bad ? bad + 'টি শব্দ মেলেনি' : 'সব শব্দ মিলেছে') + (r.extra.length ? (bad ? ', আর ' : ', তবে ') + r.extra.length + 'টি বাড়তি শব্দ শোনা গেছে' : '') + '। ক্বারীর তিলাওয়াত শুনে আবার চেষ্টা করুন।'));
+      var fl = el('div', 'aiwords'); fl.lang = 'ar'; fl.dir = 'rtl';
+      r.words.forEach(function (w) {
+        var sp = el('span', 'aiw ' + w.status, w.word);
+        sp.setAttribute('aria-label', w.status === 'ok' ? 'ঠিক' : (w.status === 'missed' ? 'বাদ পড়েছে' : 'অন্যরকম শোনা গেছে'));
+        fl.appendChild(sp); fl.appendChild(document.createTextNode(' '));
+      });
+      box.appendChild(fl);
+      if (!r.allOk) {
+        var lg = el('p', 'muted'); lg.textContent = '';
+        lg.appendChild(el('span', 'aiw ok', 'সবুজ')); lg.appendChild(document.createTextNode(' = ঠিক · '));
+        lg.appendChild(el('span', 'aiw wrong', 'লাল')); lg.appendChild(document.createTextNode(' = অন্যরকম শোনা গেছে · '));
+        lg.appendChild(el('span', 'aiw missed', 'কমলা')); lg.appendChild(document.createTextNode(' = বাদ পড়েছে'));
+        box.appendChild(lg);
+      }
+      box.appendChild(el('p', 'muted', 'AI ভুল করতে পারে; সন্দেহ হলে উস্তাদকে শোনান। শুধু শব্দ মেলানো হয়েছে, তাজবীদ নয়।'));
+    }
+    btn('বন্ধ', 'alt', function () { ov.remove(); }, row);
+    btn('🔊 ক্বারী শুনুন', 'alt', function () { ov.remove(); if (view.name === 'sura' && key() === myKey) startQari(); }, row);
+    btn('● আবার রেকর্ড', '', function () { ov.remove(); if (view.name === 'sura' && key() === myKey) askMic(); }, row);
+    box.appendChild(row);
+    try { var log = JSON.parse(store('ai-log') || '[]'); log.push([Date.now(), s.sura, a.n, r.ok || 0, r.total || 0, ms]); store('ai-log', JSON.stringify(log.slice(-200))); } catch (e) {}
   }
 
   var micExplained = false, micRequest = null;
@@ -855,6 +958,7 @@
     c.appendChild(el('p', 'muted', 'বাংলা অর্থ: মুহিউদ্দীন খান-এর অনুবাদ (Tanzil.net থেকে, অপরিবর্তিত)। http://tanzil.net/trans/ । অনুবাদ কুরআনের পূর্ণ ব্যাখ্যা নয়; বুঝতে অসুবিধা হলে আলেমের কাছে জানুন।'));
     c.appendChild(el('p', 'muted', 'কুরআনের আরবি পাঠ: Tanzil.net (Uthmani, v1.1), লাইসেন্স CC BY 3.0। আরবি অক্ষর ও হরকত অপরিবর্তিত (ওয়াকফ-চিহ্ন সহ)। ভুল পেলে উপরের "মতামত" বোতামে জানান।'));
     c.appendChild(el('p', 'muted', 'তাজবীদের রং: quran-tajweed, শব্দে শব্দে তিলাওয়াতের সময়: quran-align (দুটিই Collin Fair, CC BY 4.0, github.com/cpfair)। আরবি পাঠ বদলানো হয়নি, শুধু রং ও সময় যোগ।'));
+    c.appendChild(el('p', 'muted', 'AI দিয়ে মিলানো: tarteel-ai/whisper-base-ar-quran মডেল (Apache-2.0), ফোনেই চলে transformers.js (Apache-2.0, Hugging Face) দিয়ে। AI শুধু আপনার পড়া শোনে, নিজে কখনো তিলাওয়াত করে না; AI ভুল করতে পারে।'));
     c.appendChild(el('p', 'muted', 'হাফেজি পাতার ভাগ (15 লাইন, 611 পাতা): quran_android (Quran.com-এর ওপেন সোর্স অ্যাপ, GPL-3.0, github.com/quran/quran_android)। শুধু কোন পাতায় কোন আয়াত, তা নেওয়া হয়েছে; আরবি পাঠ Tanzil-এরই।'));
     c.appendChild(el('p', 'muted', 'ওপেন সোর্স: এই অ্যাপের কোড GPL-3.0 লাইসেন্সে সবার জন্য খোলা: github.com/ansar-design/quran-sathi । কুরআনের পাঠ, অনুবাদ, তিলাওয়াত ও ফন্ট নিজ নিজ লাইসেন্সে থাকে (NOTICE.md)।'));
     c.appendChild(el('p', 'muted', 'ব্যবহারকারীর তথ্য: আপনার রেকর্ডিং ও অগ্রগতি শুধু এই ফোনে থাকে; অ্যাপ এগুলো কোথাও আপলোড করে না। অনলাইনে তিলাওয়াত শুনলে বা ডাউনলোড করলে অডিও সার্ভার আপনার আইপি ঠিকানা ও কোন আয়াতের অডিও চাওয়া হলো তা দেখতে পারে।'));
@@ -897,7 +1001,7 @@
   window.addEventListener('pagehide', dropAll);
   window.addEventListener('resize', function () { var se = document.querySelector('.ayah.sel'); if (view.name === 'sura' && se && se.scrollIntoView) se.scrollIntoView({ block: 'center' }); });
 
-  fetch('data/quran.json').then(function (r) { return r.json(); }).then(function (d) { data = d; render(); return fetch('data/quran_bn.json').then(function (r) { return r.json(); }).then(function (t) { bnTr = t; render(); return fetch('data/pron_bn.json').then(function (r) { return r.json(); }).then(function (p) { pron = p; render(); return fetch('data/spell_bn.json').then(function (r) { return r.json(); }).then(function (q) { spell = q; render(); return fetch('data/tajweed.json').then(function (r) { return r.json(); }).then(function (tj) { tajweed = tj; render(); return fetch('data/words_husary.json').then(function (r) { return r.json(); }).then(function (wt) { wordT = wt; render(); }); }).catch(function () {}); }); }).catch(function () {}); }).catch(function () {}); })
+  fetch('data/quran.json').then(function (r) { return r.json(); }).then(function (d) { data = d; render(); return fetch('data/quran_bn.json').then(function (r) { return r.json(); }).then(function (t) { bnTr = t; if (view.name !== 'list') render(); return fetch('data/pron_bn.json').then(function (r) { return r.json(); }).then(function (p) { pron = p; if (view.name !== 'list') render(); return fetch('data/spell_bn.json').then(function (r) { return r.json(); }).then(function (q) { spell = q; if (view.name !== 'list') render(); return fetch('data/tajweed.json').then(function (r) { return r.json(); }).then(function (tj) { tajweed = tj; if (view.name !== 'list') render(); return fetch('data/words_husary.json').then(function (r) { return r.json(); }).then(function (wt) { wordT = wt; if (view.name !== 'list') render(); }); }).catch(function () {}); }); }).catch(function () {}); }).catch(function () {}); })
     .catch(function () { main.textContent = 'ডেটা লোড করা যায়নি।'; });
   fetch('data/pages15.json').then(function (r) { return r.json(); }).then(function (d) { pg15 = d; if (data && (view.name === 'hifz' || view.name === 'sura')) render(); }).catch(function () {});
   render();

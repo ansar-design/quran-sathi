@@ -53,12 +53,12 @@ def sign_for(letter, v):
 
 
 class Tok:
-    __slots__ = ('c', 'v', 'tan', 'shadda', 'sukun', 'sup', 'smallw', 'smally', 'maddah', 'hamza', 'silent', 'used', 'after_glide', 'waqf_alif')
+    __slots__ = ('c', 'v', 'tan', 'shadda', 'sukun', 'sup', 'smallw', 'smally', 'maddah', 'hamza', 'silent', 'used', 'after_glide', 'waqf_alif', 'smallm')
 
     def __init__(self, c):
         self.c = c; self.v = None; self.tan = None; self.shadda = False; self.sukun = False
         self.sup = False; self.smallw = False; self.smally = False; self.maddah = False
-        self.hamza = False; self.silent = False; self.used = False; self.after_glide = False; self.waqf_alif = False
+        self.hamza = False; self.silent = False; self.used = False; self.after_glide = False; self.waqf_alif = False; self.smallm = None
 
 
 def hamza_on_tatweel(w):
@@ -114,6 +114,7 @@ def parse_word(w):
             elif ch in SILENT_MARKS:
                 t.silent = True
                 t.waqf_alif = (ch == '۠')   # U+06E0: silent when joined, read when stopping (أَنَا۠)
+            elif ch in ('ۢ', 'ۭ'): t.smallm = ch  # Preserve source sign; context decides iqlab.
             elif ch in IGNORE: pass
             else:
                 sys.stderr.write('unknown mark U+%04X in %s\n' % (ord(ch), w))

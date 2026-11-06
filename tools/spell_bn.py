@@ -50,6 +50,26 @@ def spell_word(w, next_token=None, ayah_start=False):
             continue  # long-i carrier, already represented with the preceding letter
         nxt = toks[i + 1] if i + 1 < len(toks) else None
         following = nxt if nxt is not None else next_token
+        # Expert22:36 E1/E2: connected reading, never across sakta/ayah end.
+        # Tanween variants also use small-meem codepoints: require a following ba.
+        bare_nm = (t.c in 'نم' and T.is_bare(t) and not
+                   (t.silent or t.hamza or t.maddah))
+        if following is not None and following.c == 'ب' and bare_nm:
+            if t.c == 'ن':
+                mark = 'ছোট মীম' if t.smallm else ('সাকিন' if t.sukun else 'চিহ্ন নেই')
+                parts.append(nm + '-' + mark + ' (মিলিয়ে পড়লে নূনের বদলে মীমের ধ্বনি গুন্নাহসহ পড়ুন)')
+            else:
+                mark = 'সাকিন' if t.sukun else 'চিহ্ন নেই'
+                parts.append(nm + '-' + mark + ' (মিলিয়ে পড়লে পরের বা-এর আগে মীমের ধ্বনি আড়াল করে গুন্নাহসহ পড়ুন)')
+            continue
+        if (nxt is None and following is not None and following.shadda and bare_nm
+                and ((t.c == 'ن' and following.c in 'رلنم') or
+                     (t.c == 'م' and following.c == 'م'))):
+            mark = 'সাকিন' if t.sukun else 'চিহ্ন নেই'
+            nasal = 'গুন্নাহ ছাড়া' if following.c in 'رل' else 'গুন্নাহসহ'
+            parts.append(nm + '-' + mark + ' (মিলিয়ে পড়লে পরের শব্দের '
+                         + NAME[following.c] + '-এর সঙ্গে মিশিয়ে পড়ুন; ' + nasal + ')')
+            continue
         if (T.merges_into(t, following, word_boundary=nxt is None) or
                 (nxt is None and T.merges_waw(t, toks[i - 1] if i else None, following))):
             target = NAME[following.c]
@@ -80,6 +100,9 @@ def spell_word(w, next_token=None, ayah_start=False):
         if t.tan:
             # Elementary spelling sound; connected/stop rules belong to recitation.
             mark = TAN[t.tan]; snd = T.carry(t.c, t.tan, t, i == 0) + 'ন্'
+            if t.smallm and following is not None and following.c == 'ب':
+                mark += ' (মিলিয়ে পড়লে তানবীনের নূনের বদলে মীমের ধ্বনি গুন্নাহসহ পড়ুন)'
+                snd = ''  # Do not present elementary -n as connected recitation.
             if t.tan == 'a' and nxt is not None and nxt.c == 'ى' and T.is_bare(nxt):
                 mark += ' (শেষের আলিফ মাকসূরা পড়া হয় না; থামলে টেনে আ)'
         elif v:
