@@ -18,3 +18,9 @@ The content below is **not** covered by that licence. Each item keeps its own te
 Generated data (`pron_bn.json`, `spell_bn.json`) is produced by the GPL tools in `tools/` from the Tanzil text above.
 
 If you are a rights holder and want something changed or removed, please open an issue.
+
+## Optional AI slow voice (Juz Amma, 6 Nov 2026)
+- Audio made in advance with Google Gemini TTS (voice Charon) from the Tanzil text; bundled in www/audio/gemini (528 of 564 ayat).
+- Each file passed a strict check: quran-muaalem (Hafs phonemes) heard 3 ways = 0 errors + transcript has nothing besides Quran. Ayat that did not pass play Husary.
+- Labelled "AI ধীর কণ্ঠ" in the app; Husary stays the default. Scholar (Huzur) listening review: PENDING.
+- Generator: tools/ai/gemini_voice_make.py, index: tools/ai/gemini_voice_index.py, review list: tools/ai/gemini_voice/review.md.

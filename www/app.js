@@ -39,7 +39,7 @@
     // A word tap must never feed qari audio into an active or pending learner take.
     if (micRequest || rec) { alert('শব্দ শুনতে আগে রেকর্ডিং থামান। রেকর্ডিং প্রস্তুত হলে আবার চাপুন।'); return false; }
     stopPlay();
-    var a = new Audio('audio/husary/' + sura + '_' + (ayah + 1) + '.mp3'); wp = a;
+    var a = new Audio('audio/husary/' + sura + '_' + (ayah + 1) + '.mp3'); a.preservesPitch = true; wp = a;
     if (slow) { a.defaultPlaybackRate = 0.75; a.playbackRate = 0.75; }
     var end = (t[1] + 120) / 1000;
     a.onloadedmetadata = function () { if (wp === a) a.currentTime = Math.max(0, t[0] - 40) / 1000; };
@@ -94,7 +94,18 @@
       if ((now === null || !goodJson(now)) && r && typeof r.data === 'string' && goodJson(r.data)) { store(k, r.data); if (data && (view.name === 'hifz' || view.name === 'learn')) render(); }
     }).catch(function () {});
   });
+  // 6 Nov (MD "Yes, add it"): OPTIONAL "AI ধীর কণ্ঠ" for Juz Amma = Google Gemini voice, made in advance and bundled.
+  // Only ayat that passed the strict machine check (tools/ai/gemini_voice_make.py) have a file, listed in
+  // audio/gemini/index.json; any other ayah plays Husary. Husary stays the default. Word taps always use Husary.
+  var voice = store('voice') === 'gemini' ? 'gemini' : 'husary', gemOk = {};
+  fetch('audio/gemini/index.json').then(function (r) { return r.json(); }).then(function (j) {
+    (j && j.ayat || []).forEach(function (k) { gemOk[k] = 1; }); gemOk._bism = !!(j && j.bismillah);
+    try { if (data && view.name === 'sura') drawBar(); } catch (e) {}   // the bar was drawn before the list arrived
+  }).catch(function () {});
+  function gemHas(s, a) { return voice === 'gemini' && s.sura >= 78 && !!gemOk[s.sura + '_' + a.n]; }
+  function bismSrc() { return voice === 'gemini' && gemOk._bism ? 'audio/gemini/bismillah.mp3' : 'audio/husary/bismillah.mp3'; }
   function qariSrc(s, a, i) {
+    if (gemHas(s, a)) return 'audio/gemini/' + s.sura + '_' + a.n + '.mp3';
     if (s.sura >= 78) return 'audio/husary/' + s.sura + '_' + a.n + '.mp3';
     if (isDl(s.sura) && dlBase) return Cap.convertFileSrc(dlBase + '/' + s.sura + '_' + a.n + '.mp3');
     return CDN + (s.g0 + i) + '.mp3';
@@ -201,7 +212,7 @@
   }
   function playBism() {
     qFinished = false; qBism = true;
-    var au = new Audio('audio/husary/bismillah.mp3'); qp = au;
+    var au = new Audio(bismSrc()); au.preservesPitch = true; qp = au;
     if (slow) { au.defaultPlaybackRate = 0.75; au.playbackRate = 0.75; }
     au.onended = au.onerror = function () { if (qp !== au) return; qBism = false; playQari(); };
     var pr = au.play(); if (pr && pr.catch) pr.catch(function (e) { qariFailure(au, e, true); });
@@ -209,7 +220,7 @@
   }
   function playQari(done) {
     qFinished = false;
-    var s = curSura(), a = s.ayas[sel], au = new Audio(qariSrc(s, a, sel));
+    var s = curSura(), a = s.ayas[sel], au = new Audio(qariSrc(s, a, sel)); au.preservesPitch = true;
     qp = au;
     if (slow) { au.defaultPlaybackRate = 0.75; au.playbackRate = 0.75; }
     au.onended = function () {
@@ -629,13 +640,13 @@
   }
   function playPage(items) {      // whole page once, Bismillah before ayah 1 of each sura (not 9)
     stopPlay(); pgSeq = []; pgPos = 0;
-    items.forEach(function (it, k) { if (it.i === 0 && it.s.sura !== 9) pgSeq.push({ src: 'audio/husary/bismillah.mp3', k: k }); pgSeq.push({ src: qariSrc(it.s, it.s.ayas[it.i], it.i), k: k }); });
+    items.forEach(function (it, k) { if (it.i === 0 && it.s.sura !== 9) pgSeq.push({ src: bismSrc(), k: k }); pgSeq.push({ src: qariSrc(it.s, it.s.ayas[it.i], it.i), k: k }); });
     nextPage(); drawPageBar(items);
   }
   function nextPage() {
     if (!pgSeq) return;
     if (pgPos >= pgSeq.length) { pgp = null; pgSeq = null; markPage(-1); if (view.name === 'page') drawPageBar(pageItems(view.page)); return; }
-    var it = pgSeq[pgPos++], au = new Audio(it.src); pgp = au; markPage(it.k);
+    var it = pgSeq[pgPos++], au = new Audio(it.src); au.preservesPitch = true; pgp = au; markPage(it.k);
     if (slow) { au.defaultPlaybackRate = 0.75; au.playbackRate = 0.75; }
     au.onended = function () { if (pgp === au) nextPage(); };
     au.onerror = function () { if (pgp !== au) return; stopPage(); if (view.name === 'page') drawPageBar(pageItems(view.page)); alert('তিলাওয়াতের অডিও চালু করা যায়নি। আবার চেষ্টা করুন।'); };
@@ -805,13 +816,20 @@
         return;
       }
       var tk = curTake();
-      if (qp) { btn('■ ক্বারী থামান', 'rec', function () { stopQari(); qRep = 0; drawBar(); }, bar); bar.appendChild(el('span', 'timer', qBism ? 'বিসমিল্লাহ · তারপর আয়াত ' + bnCount(curSura().ayas[sel].n) : 'আয়াত ' + bnCount(curSura().ayas[sel].n) + ' · শুনছেন ' + bnCount(qRep + 1) + '/' + bnCount(QREPS[qri]) + ' বার' + (slow ? ' · ধীরে' : ''))); return; }
+      if (qp) { btn('■ ক্বারী থামান', 'rec', function () { stopQari(); qRep = 0; drawBar(); }, bar); bar.appendChild(el('span', 'timer', qBism ? 'বিসমিল্লাহ · তারপর আয়াত ' + bnCount(curSura().ayas[sel].n) : 'আয়াত ' + bnCount(curSura().ayas[sel].n) + ' · শুনছেন ' + bnCount(qRep + 1) + '/' + bnCount(QREPS[qri]) + ' বার' + (slow ? ' · ধীরে' : '') + (curSura().sura >= 78 && voice === 'gemini' ? (gemHas(curSura(), curSura().ayas[sel]) ? ' · AI কণ্ঠ' : ' · এই আয়াত ক্বারী হুসারি') : ''))); return; }
       if (qFinished) { var finished = el('div', 'hint', 'সূরার শেষ আয়াত পর্যন্ত শোনা হয়েছে। এই আয়াত আবার শুনতে ক্বারী চাপুন।'); finished.setAttribute('role', 'status'); bar.appendChild(finished); }
       var controls = el('div', 'practice-controls');
       bar.appendChild(controls);
       btn('🔊 ক্বারী', 'alt', startQari, controls);
       var sb = btn(slow ? 'ধীরে ✓' : 'ধীরে', 'alt', function () { slow = !slow; store('slow', slow ? '1' : '0'); drawBar(); }, controls);
       sb.setAttribute('aria-pressed', slow ? 'true' : 'false');
+      if (curSura().sura >= 78 && Object.keys(gemOk).length > 1) {
+        var vb = btn(voice === 'gemini' ? 'কণ্ঠ: AI ধীর' : 'কণ্ঠ: ক্বারী হুসারি', 'alt', function () {
+          if (voice === 'gemini') { voice = 'husary'; store('voice', 'husary'); drawBar(); return; }
+          voiceNotice(function () { voice = 'gemini'; store('voice', 'gemini'); drawBar(); });
+        }, controls);
+        vb.setAttribute('aria-label', 'তিলাওয়াতের কণ্ঠ বদলান: এখন ' + (voice === 'gemini' ? 'AI ধীর কণ্ঠ' : 'ক্বারী হুসারি'));
+      }
       btn('শুনব ' + bnCount(QREPS[qri]) + ' বার', 'alt', function () { qri = (qri + 1) % QREPS.length; store('qrep', String(qri)); drawBar(); }, controls).setAttribute('aria-label', 'প্রতি আয়াত ' + bnCount(QREPS[qri]) + ' বার শোনা; চাপলে সংখ্যা বদলাবে');
       btn(tk ? '● আবার রেকর্ড' : '● রেকর্ড', '', askMic, controls);
       bar.appendChild(el('div', 'muted hint', 'রেকর্ড শুধু এখন শোনার জন্য, অ্যাপ বন্ধ করলে মুছে যায়'));
@@ -822,7 +840,7 @@
           bar.appendChild(el('span', 'timer', '♪ বাজছে'));
         } else {
           btn('▶ শুনুন', 'alt', function () {
-            var a = new Audio(tk); player = a;
+            var a = new Audio(tk); a.preservesPitch = true; player = a;
             a.onended = a.onerror = function () { if (player === a) { player = null; if (view.name === 'sura') drawBar(); } };
             var p = a.play(); if (p && p.catch) p.catch(function () { if (player !== a) return; player = null; a_pause(a); if (view.name === 'sura') drawBar(); alert('রেকর্ডিং বাজানো যায়নি। ফোনের ভলিউম দেখে আবার চেষ্টা করুন।'); });
             drawBar();
@@ -835,6 +853,17 @@
   // 6 Nov 2026 (MD: built-in AI, beat competitors): on-phone AI check of the learner's own recording, word by word.
   // AI only listens; it never recites or writes Quran text. Words only, not tajweed. Voice never leaves the phone.
   var aiBusy = false;
+  function voiceNotice(go) {
+    if (store('voice-ok') === '1') return go();
+    var ov = el('div', 'ov voice-notice'), box = el('div', 'card');
+    box.appendChild(el('h2', null, 'AI ধীর কণ্ঠ (ঐচ্ছিক)'));
+    box.appendChild(el('p', null, 'এই ধীর কণ্ঠ Google Gemini AI দিয়ে তৈরি। এটি কোনো ক্বারীর তিলাওয়াত নয়।'));
+    box.appendChild(el('p', 'aibul', '• কোনো আলেম বা ক্বারী এই AI অডিও যাচাই করেননি। AI-এর মিল-পরীক্ষা তাজবীদ যাচাই নয়।\n• শেখার জন্য ক্বারী হুসারির তিলাওয়াত শুনুন। মূল কণ্ঠ হুসারি; যেকোনো সময় ফিরে যেতে পারবেন।\n• AI অডিও না-থাকা আয়াতে হুসারির তিলাওয়াত বাজবে।'));
+    var row = el('div', 'row');
+    btn('এখন নয়', 'alt', function () { ov.remove(); }, row);
+    btn('বুঝেছি, শুনব', '', function () { ov.remove(); store('voice-ok', '1'); go(); }, row);
+    box.appendChild(row); ov.appendChild(box); document.body.appendChild(ov);
+  }
   function aiNotice(go) {
     if (store('ai-ok') === '1') return go();
     var ov = el('div', 'ov'), box = el('div', 'card');
@@ -974,7 +1003,8 @@
     c.appendChild(el('p', 'muted', 'বাংলা অর্থ: মুহিউদ্দীন খান-এর অনুবাদ (Tanzil.net থেকে, অপরিবর্তিত)। http://tanzil.net/trans/ । অনুবাদ কুরআনের পূর্ণ ব্যাখ্যা নয়; বুঝতে অসুবিধা হলে আলেমের কাছে জানুন।'));
     c.appendChild(el('p', 'muted', 'কুরআনের আরবি পাঠ: Tanzil.net (Uthmani, v1.1), লাইসেন্স CC BY 3.0। আরবি অক্ষর ও হরকত অপরিবর্তিত (ওয়াকফ-চিহ্ন সহ)। ভুল পেলে উপরের "মতামত" বোতামে জানান।'));
     c.appendChild(el('p', 'muted', 'তাজবীদের রং: quran-tajweed, শব্দে শব্দে তিলাওয়াতের সময়: quran-align (দুটিই Collin Fair, CC BY 4.0, github.com/cpfair)। আরবি পাঠ বদলানো হয়নি, শুধু রং ও সময় যোগ।'));
-    c.appendChild(el('p', 'muted', 'AI দিয়ে মিলানো: tarteel-ai/whisper-base-ar-quran মডেল (Apache-2.0), ফোনেই চলে transformers.js (Apache-2.0, Hugging Face) দিয়ে। AI শুধু আপনার পড়া শোনে, নিজে কখনো তিলাওয়াত করে না; AI ভুল করতে পারে।'));
+    c.appendChild(el('p', 'muted', 'AI দিয়ে মিলানো: tarteel-ai/whisper-base-ar-quran মডেল (Apache-2.0), ফোনেই চলে transformers.js (Apache-2.0, Hugging Face) দিয়ে। শব্দ-মেলানোর মডেল শুধু আপনার পড়া শোনে, নিজে তিলাওয়াত তৈরি করে না; AI ভুল করতে পারে।'));
+    c.appendChild(el('p', 'muted', 'ঐচ্ছিক AI ধীর কণ্ঠ (আমপারা): Google Gemini AI দিয়ে তৈরি; এটি কোনো ক্বারীর তিলাওয়াত নয়। কোনো আলেম বা ক্বারী এই AI অডিও যাচাই করেননি। quran-muaalem মডেলে অডিও মিলিয়ে দেখা হয়েছে; AI-এর মিল-পরীক্ষা তাজবীদ যাচাই নয়। শেখার জন্য ক্বারী হুসারির তিলাওয়াত শুনুন। মূল কণ্ঠ হুসারি; AI অডিও না-থাকা আয়াতেও হুসারি বাজে।'));
     c.appendChild(el('p', 'muted', 'হাফেজি পাতার ভাগ (15 লাইন, 611 পাতা): quran_android (Quran.com-এর ওপেন সোর্স অ্যাপ, GPL-3.0, github.com/quran/quran_android)। শুধু কোন পাতায় কোন আয়াত, তা নেওয়া হয়েছে; আরবি পাঠ Tanzil-এরই।'));
     c.appendChild(el('p', 'muted', 'ওপেন সোর্স: এই অ্যাপের কোড GPL-3.0 লাইসেন্সে সবার জন্য খোলা: github.com/ansar-design/quran-sathi । কুরআনের পাঠ, অনুবাদ, তিলাওয়াত ও ফন্ট নিজ নিজ লাইসেন্সে থাকে (NOTICE.md)।'));
     c.appendChild(el('p', 'muted', 'ব্যবহারকারীর তথ্য: আপনার রেকর্ডিং ও অগ্রগতি শুধু এই ফোনে থাকে; অ্যাপ এগুলো কোথাও আপলোড করে না। অনলাইনে তিলাওয়াত শুনলে বা ডাউনলোড করলে অডিও সার্ভার আপনার আইপি ঠিকানা ও কোন আয়াতের অডিও চাওয়া হলো তা দেখতে পারে।'));

@@ -41,7 +41,11 @@ main { max-width:720px; margin:0 auto; padding:14px max(14px,env(safe-area-inset
 .bism { font:30px/2 var(--f-ar); direction:rtl; text-align:center; color:var(--accent); padding:4px 0 8px; }
 .timer { align-self:center; color:var(--bad); font-weight:600; font-size:20px; min-width:70px; }
 .ov { position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,.5); display:grid; place-items:center; padding:20px; }
-.ov .card { max-width:420px; } .row { display:flex; gap:10px; justify-content:flex-end; margin-top:10px; }
+.ov .card { max-width:420px; }
+.voice-notice { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr); }
+.voice-notice .card { box-sizing:border-box; width:100%; max-height:100%; overflow:auto; overflow-wrap:anywhere; }
+.voice-notice .row { flex-wrap:wrap; }
+.voice-notice .btn { max-width:100%; white-space:normal; } .row { display:flex; gap:10px; justify-content:flex-end; margin-top:10px; }
 .ayah .pron { display:block; text-align:left; font-size:calc(var(--az,32px) * .5625); line-height:1.7; color:var(--ink); margin:6px 0; font-weight:600; font-family:'Hind Siliguri','Noto Sans Bengali',sans-serif; }
 .spell { display:flex; flex-wrap:wrap; flex-direction:row-reverse; gap:6px; margin:6px 0; }
 .sw { display:flex; flex-direction:column; align-items:center; background:rgba(0,0,0,.05); border-radius:8px; padding:4px 8px; max-width:100%; }
@@ -136,7 +140,7 @@ dialog.bn-dialog::backdrop { background:rgba(0,0,0,.5); }
 <main id="main"><p class="muted">লোড হচ্ছে…</p></main>
 <div class="bar" id="bar" hidden></div>
 <script>
-window.APP_FEEDBACK = { app:'কুরআন সাথী', pkg:'com.amirahsworld.qurantutor', version:'0.1 (1)', email:'md@tosacreations.com', lang:'bn', bottom:80 };
+window.APP_FEEDBACK = { app:'কুরআন সাথী', pkg:'com.amirahsworld.qurantutor', version:'0.1 (1)', email:'support@tosacreations.com', lang:'bn', bottom:80 };
 </script>
 <script src="feedback.js"></script>
 <script src="lib/hifz_plan.js"></script>

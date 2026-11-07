@@ -46,6 +46,8 @@
     var record = button('● রেকর্ড শুরু', '', start);
     var stop = button('■ রেকর্ড থামান', '', stopRecording); stop.hidden = true;
     var check = button('✓ পাতাটি AI দিয়ে মিলান', '', analyse); check.hidden = true;
+    // Move focus before hiding/disabling its owner; otherwise Escape lands on body.
+    function retainFocus(control) { if (document.activeElement === control) close.focus(); }
     function stopTracks() { if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; } }
     function clocksOff() { clearTimeout(timer); clearInterval(ticker); timer = ticker = null; }
     function cleanup() {
@@ -56,10 +58,11 @@
       ov.remove(); if (previous && previous.isConnected) previous.focus();
     }
     function visibility() { if (document.hidden) cleanup(); }
-    function stopRecording() { if (recorder && recorder.state === 'recording') { stop.disabled = true; recorder.stop(); clocksOff(); stopTracks(); } }
+    function stopRecording() { if (recorder && recorder.state === 'recording') { retainFocus(stop); stop.disabled = true; recorder.stop(); clocksOff(); stopTracks(); } }
     function start() {
       if (pending || recorder || busy || closed) return;
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !root.MediaRecorder) { status.textContent = 'এই ফোনে রেকর্ডিং চালু করা যায়নি।'; return; }
+      retainFocus(record);
       pending = true; record.disabled = true; check.hidden = true; results.textContent = '';
       playback.pause(); playback.removeAttribute('src'); playback.hidden = true;
       if (url) { URL.revokeObjectURL(url); url = null; }
@@ -73,6 +76,7 @@
         r.onstop = function () {
           clocksOff(); stopTracks(); recorder = null;
           if (closed) return;
+          retainFocus(stop);
           stop.hidden = true; record.hidden = false; record.disabled = false; record.textContent = '● আবার রেকর্ড';
           if (!parts.length) { status.textContent = 'রেকর্ড পাওয়া যায়নি। আবার চেষ্টা করুন।'; return; }
           url = URL.createObjectURL(new Blob(parts, { type: r.mimeType || 'audio/webm' }));
@@ -95,6 +99,7 @@
     function analyse() {
       if (closed || busy || !url) return;
       playback.pause();
+      retainFocus(check); retainFocus(record);
       busy = true; check.disabled = true; record.hidden = false; record.disabled = true;
       results.textContent = ''; status.textContent = 'AI চালু হচ্ছে… প্রথমবার সময় লাগতে পারে।';
       Promise.resolve().then(function () { return root.AiCheck.check(url, ref.text, function (stage) {

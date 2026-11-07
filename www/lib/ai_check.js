@@ -22,10 +22,12 @@
     return asrP;
   }
   function pcm16k(url) {
-    return fetch(url).then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
+    return fetch(url).then(function (r) { if (!r.ok) throw new Error('Recording unavailable'); return r.arrayBuffer(); }).then(function (buf) {
       var AC = window.AudioContext || window.webkitAudioContext, ac = new AC();
-      return new Promise(function (ok, bad) { ac.decodeAudioData(buf, ok, bad); }).then(function (ab) {
-        try { ac.close(); } catch (e) {}
+      return Promise.resolve().then(function () { return ac.decodeAudioData(buf); }).finally(function () {
+        // Release hardware on decode success AND failure before permitting a retry.
+        return Promise.resolve().then(function () { return ac.close(); }).catch(function () {});
+      }).then(function (ab) {
         var n = Math.max(1, Math.ceil(ab.duration * 16000)), oc = new OfflineAudioContext(1, n, 16000);
         var src = oc.createBufferSource(); src.buffer = ab; src.connect(oc.destination); src.start();
         return oc.startRendering();
@@ -35,16 +37,17 @@
   function check(url, refText, onStage) {
     if (checking) return Promise.reject(new Error('AI check already running'));
     checking = true;
-    return Promise.all([load(onStage), pcm16k(url)]).then(function (r) {
-      var asr = r[0], audio = r[1];
+    return Promise.resolve().then(function () { return pcm16k(url); }).then(function (audio) {
       if (audio.length < 16000 * 0.6) return { tooShort: true };
       var peak = 0; for (var i = 0; i < audio.length; i += 8) { var v = Math.abs(audio[i]); if (v > peak) peak = v; }
       if (peak < 0.02) return { silent: true };
+      return load(onStage).then(function (asr) {
       onStage && onStage('listen');
       var opt = audio.length > 16000 * 29 ? { chunk_length_s: 30, stride_length_s: 5 } : {};
       return asr(audio, opt).then(function (o) {
         var res = window.ReciteCheck.compare(refText, o && o.text);
         res.heard = o && o.text; return res;
+      });
       });
     }).finally(function () { checking = false; });
   }

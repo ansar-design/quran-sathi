@@ -24,3 +24,6 @@ tools/ai/out_fp32/
 tools/ai/model-base/
 tools/ai/node_modules/
 tools/ai/package-lock.json
+
+# optional AI slow voice audio (Gemini TTS) is generated locally, not in git
+www/audio/gemini/
