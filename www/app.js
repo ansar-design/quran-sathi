@@ -869,15 +869,40 @@
     var ov = el('div', 'ov'), box = el('div', 'card');
     box.appendChild(el('h2', null, 'AI দিয়ে মিলিয়ে দেখা (পরীক্ষামূলক)'));
     box.appendChild(el('p', null, 'আপনার রেকর্ড শুনে AI দেখাবে কোন শব্দ ঠিক শুনেছে, কোনটা বাদ গেছে বা অন্যরকম শুনেছে।'));
-    box.appendChild(el('p', 'aibul', '• পরীক্ষামূলক: আসল শিক্ষার্থীর কণ্ঠে এখনো পুরো যাচাই হয়নি। AI ভুল করতে পারে, বিশেষ করে বাচ্চাদের কণ্ঠে। এটা শুধু সাহায্য, উস্তাদ বা ক্বারীর বিকল্প নয়।\n• শুধু শব্দ মেলায়, তাজবীদ (মাদ্দ, গুন্নাহ) বিচার করে না।\n• পুরো কাজ ফোনেই হয়, ইন্টারনেট লাগে না, আপনার কণ্ঠ কোথাও যায় না।'));
+    box.appendChild(el('p', 'aibul', '• পরীক্ষামূলক: আসল শিক্ষার্থীর কণ্ঠে এখনো পুরো যাচাই হয়নি। AI ভুল করতে পারে, বিশেষ করে বাচ্চাদের কণ্ঠে। এটা শুধু সাহায্য, উস্তাদ বা ক্বারীর বিকল্প নয়।\n• শুধু শব্দ মেলায়, তাজবীদ (মাদ্দ, গুন্নাহ) বিচার করে না।\n• প্রথমবার একবার AI মডেল (প্রায় ' + ((window.AiCheck && window.AiCheck.sizeMB) || 105) + ' MB) নামাতে ইন্টারনেট লাগবে। তারপর পুরো কাজ ফোনেই হয়, আপনার কণ্ঠ কোথাও যায় না।'));
     var row = el('div', 'row');
     btn('এখন নয়', 'alt', function () { ov.remove(); }, row);
     btn('বুঝেছি, মিলাই', '', function () { ov.remove(); store('ai-ok', '1'); go(); }, row);
     box.appendChild(row); ov.appendChild(box); document.body.appendChild(ov);
   }
+  // MD 7 Nov 2026: the AI model is downloaded once on first use (app stays ~100 MB smaller). Ask first, show progress.
+  function aiModel(go) {
+    var A = window.AiCheck;
+    if (!A || !A.modelReady) return go();
+    A.modelReady().then(function (ok) {
+      if (ok) return go();
+      var ov = el('div', 'ov ai-model'), box = el('div', 'card'); box.setAttribute('role', 'dialog');
+      box.appendChild(el('h2', null, 'AI মডেল নামাতে হবে (একবারই)'));
+      var p = el('p', null, 'AI দিয়ে মিলাতে প্রথমবার প্রায় ' + A.sizeMB + ' MB নামবে। Wi-Fi থাকলে ভালো। একবার নামলে পরে আর ইন্টারনেট লাগবে না।');
+      p.setAttribute('role', 'status'); box.appendChild(p);
+      var row = el('div', 'row');
+      btn('এখন নয়', 'alt', function () { ov.remove(); }, row);
+      btn('নামান', '', function () {
+        row.remove(); p.textContent = 'নামছে… ০%';
+        A.download(function (pc) { p.textContent = 'নামছে… ' + pc + '%'; })
+          .then(function () { return A.modelReady(); })
+          .then(function (ok2) { if (!ok2) throw new Error('incomplete'); ov.remove(); go(); })
+          .catch(function () {
+            p.textContent = 'পুরোটা নামেনি। ইন্টারনেট দেখে আবার চেষ্টা করুন; যতটুকু নেমেছে তা থাকবে।';
+            var r2 = el('div', 'row'); btn('বন্ধ', 'alt', function () { ov.remove(); }, r2); box.appendChild(r2);
+          });
+      }, row);
+      box.appendChild(row); ov.appendChild(box); document.body.appendChild(ov);
+    });
+  }
   function aiCheck(tk) {
     if (aiBusy) return;
-    aiNotice(function () {
+    aiNotice(function () { aiModel(function () {
       var s = curSura(), i = sel, a = s.ayas[i], myKey = key();
       stopPlay(); aiBusy = true;
       var ov = el('div', 'ov'), box = el('div', 'card aibox'); box.setAttribute('role', 'dialog');
@@ -888,7 +913,7 @@
       window.AiCheck.check(tk, a.t, function (stage) { if (stage === 'listen') st.textContent = 'আপনার তিলাওয়াত শুনছে…'; })
         .then(function (r) { aiBusy = false; showAi(box, ov, r, s, i, myKey, Date.now() - t0c); })
         .catch(function () { aiBusy = false; st.textContent = 'AI চালু করা যায়নি। অ্যাপ বন্ধ করে আবার খুলে চেষ্টা করুন।'; var row = el('div', 'row'); btn('বন্ধ', 'alt', function () { ov.remove(); }, row); box.appendChild(row); });
-    });
+    }); });
   }
   function showAi(box, ov, r, s, i, myKey, ms) {
     box.textContent = '';

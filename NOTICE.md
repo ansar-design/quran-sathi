@@ -12,7 +12,7 @@ The content below is **not** covered by that licence. Each item keeps its own te
 | Word timings | `www/data/words_husary.json`, `tools/src/Husary_64kbps.json` | cpfair/quran-align (Collin Fair) | CC BY 4.0 |
 | 15-line Hafezi page map | `www/data/pages15.json`, `tools/src/quran_android_naskh_QuranData.java` | quran/quran_android (https://github.com/quran/quran_android) | GPL-3.0 |
 | Fonts: Scheherazade New, Amiri, Hind Siliguri, Tiro Bangla | `www/fonts/` | SIL Global, Amiri project, Indian Type Foundry, Tiro Typeworks | SIL Open Font License 1.1 (licence texts in `www/fonts/`) |
-| On-phone recitation check model | `www/models/quran-asr/` (built by `tools/ai`, not in git) | tarteel-ai/whisper-base-ar-quran (https://huggingface.co/tarteel-ai/whisper-base-ar-quran), converted to 8-bit ONNX | Apache-2.0 |
+| On-phone recitation check model | `www/models/quran-asr/` (built by `tools/ai`, not in git). The phone app does not carry it: it downloads the unchanged files once from this repo's release `asr-model-v1` (`www/lib/ai_check.js`, size-checked) | tarteel-ai/whisper-base-ar-quran (https://huggingface.co/tarteel-ai/whisper-base-ar-quran), converted to 8-bit ONNX | Apache-2.0 |
 | AI runtime in the app | `www/vendor/` (copied by `tools/ai/install.sh`, not in git) | transformers.js 3.7.5 (Hugging Face) + onnxruntime-web (Microsoft) | Apache-2.0 / MIT |
 
 Generated data (`pron_bn.json`, `spell_bn.json`) is produced by the GPL tools in `tools/` from the Tanzil text above.

@@ -1,0 +1,2 @@
+# Left out of the APK/AAB; the app downloads it once (www/lib/ai_check.js, GitHub release asr-model-v1)
+models
